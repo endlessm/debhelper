@@ -1,3 +1,11 @@
+debhelper (9.20130630co1) alphacentauri; urgency=low
+
+  * Use Debian version essentially as-is.
+  * Add dependency on dh-apparmor to furfill the expectations of some Ubuntu
+    packages
+
+ -- Sjoerd Simons <sjoerd.simons@collabora.co.uk>  Tue, 06 Aug 2013 11:55:59 +0200
+
 debhelper (9.20130630) unstable; urgency=low
 
   * perl_build: Use -- long option names, for compatibility with
