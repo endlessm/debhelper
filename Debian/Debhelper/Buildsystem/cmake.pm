@@ -7,7 +7,7 @@
 package Debian::Debhelper::Buildsystem::cmake;
 
 use strict;
-use Debian::Debhelper::Dh_Lib qw(compat);
+use Debian::Debhelper::Dh_Lib qw(compat get_buildprofile package_eos_app_id);
 use base 'Debian::Debhelper::Buildsystem::makefile';
 
 sub DESCRIPTION {
@@ -41,7 +41,14 @@ sub configure {
 	my @flags;
 
 	# Standard set of cmake flags
-	push @flags, "-DCMAKE_INSTALL_PREFIX=/usr";
+	if (get_buildprofile("eos-app")) {
+		# Get package app id for prefix
+		my $app_prefix = package_eos_app_id();
+		push @flags, "-DCMAKE_INSTALL_PREFIX=" . $app_prefix;
+	}
+	else {
+		push @flags, "-DCMAKE_INSTALL_PREFIX=/usr";
+	}
 	push @flags, "-DCMAKE_VERBOSE_MAKEFILE=ON";
 	push @flags, "-DCMAKE_BUILD_TYPE=RelWithDebInfo";
 

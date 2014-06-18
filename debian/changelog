@@ -1,3 +1,25 @@
+debhelper (9.20130630co2endless1) eos; urgency=low
+
+  * Debian/Debhelper/Dh_Lib.pm:
+    - Support reading a profile from the DEB_BUILD_PROFILES variable.
+    - Read the desired app id from the XCBS-EOS-AppId control field.
+    - Support querying the package's EOS app id. Use the main package's
+      app id if the package does not specify an explicit id.
+  * Debian/Debhelper/Buildsystem/autoconf.pm:
+  * Debian/Debhelper/Buildsystem/cmake.pm:
+  * Debian/Debhelper/Buildsystem/qmake.pm:
+    - Set a prefix derived from the app id when eos-app is set in
+      DEB_BUILD_PROFILES.
+  * dh_install:
+    - Adjust prefix of specified install paths for eos-app packages.
+  * dh_eosapp:
+    - New dh script moving all contents of /usr to /endless/<app> when
+      eos-app is set in DEB_BUILD_PROFILES.
+  * dh:
+    - Run dh_eosapp at the end of the install sequence.
+
+ -- Dan Nicholson <nicholson@endlessm.com>  Wed, 18 Jun 2014 17:59:47 +0000
+
 debhelper (9.20130630co2) alphacentauri; urgency=low
 
   * Add --upstart-only dummy argument to dh_installinit

@@ -18,7 +18,8 @@ use vars qw(@ISA @EXPORT %dh);
 	    &inhibit_log &load_log &write_log &commit_override_log
 	    &dpkg_architecture_value &sourcepackage
 	    &is_make_jobserver_unavailable &clean_jobserver_makeflags
-	    &cross_command &set_buildflags &get_buildoption);
+	    &cross_command &set_buildflags &get_buildoption
+	    &get_buildprofile &package_eos_app_id);
 
 my $max_compat=10;
 
@@ -778,18 +779,20 @@ sub sourcepackage {
 # packages.
 # As a side effect, populates %package_arches and %package_types with the
 # types of all packages (not only those returned).
-my (%package_types, %package_arches);
+my (%package_types, %package_arches, %package_eos_app_ids);
 sub getpackages {
 	my $type=shift;
 
 	%package_types=();
 	%package_arches=();
+	%package_eos_app_ids=();
 	
 	$type="" if ! defined $type;
 
 	my $package="";
 	my $arch="";
 	my $package_type;
+	my $eos_app_id;
 	my @list=();
 	my %seen;
 	open (CONTROL, 'debian/control') ||
@@ -814,11 +817,15 @@ sub getpackages {
 		if (/^(?:X[BC]*-)?Package-Type:\s*(.*)/) {
 			$package_type=$1;
 		}
+		if (/^(?:XCBS-)?EOS-AppId:\s*(.*)/) {
+			$eos_app_id=$1;
+		}
 		
 		if (!$_ or eof) { # end of stanza.
 			if ($package) {
 				$package_types{$package}=$package_type;
 				$package_arches{$package}=$arch;
+				$package_eos_app_ids{$package}=$eos_app_id;
 			}
 
 			if ($package &&
@@ -830,6 +837,7 @@ sub getpackages {
 				push @list, $package;
 				$package="";
 				$arch="";
+				$eos_app_id="";
 			}
 		}
 	}
@@ -847,6 +855,36 @@ sub package_arch {
 		return buildarch();
 	}
 	return $package_arches{$package} eq 'all' ? "all" : buildarch();
+}
+
+# Returns the EOS AppID for a package.
+sub package_eos_app_id {
+	my $package=shift;
+
+	$package = $dh{MAINPACKAGE} if ! defined $package;
+	verbose_print("Checking for app ID ${package}");
+	if (! exists $package_eos_app_ids{$package}) {
+		warning "package $package is not in control info";
+		return $package;
+	}
+	if (! $package_eos_app_ids{$package}) {
+		# Return the ID of the main package if there is not a
+		# specific ID for this package.
+		my $app_id;
+
+		if ($package eq $dh{MAINPACKAGE}) {
+			# Just return the package name if no ID set on
+			# the main package.
+			$app_id=$package;
+		}
+		else {
+			$app_id=package_eos_app_id($dh{MAINPACKAGE});
+		}
+		verbose_print("No app ID set, returning ${app_id}");
+		return $app_id;
+	}
+	verbose_print("Found app ID $package_eos_app_ids{$package}");
+	return $package_eos_app_ids{$package};
 }
 
 # Return true if a given package is really a udeb.
@@ -975,6 +1013,21 @@ sub get_buildoption {
 			return $1;
 		}
 		elsif ($opt eq $wanted) {
+			return 1;
+		}
+	}
+}
+
+# Gets a DEB_BUILD_PROFILES profile, if set.
+sub get_buildprofile {
+	my $wanted=shift;
+
+	verbose_print("Checking for build profile ${wanted}");
+	return undef unless exists $ENV{DEB_BUILD_PROFILES};
+
+	foreach my $opt (split(/\s+/, $ENV{DEB_BUILD_PROFILES})) {
+		verbose_print("Found build profile ${opt}");
+		if ($opt eq $wanted) {
 			return 1;
 		}
 	}

@@ -155,13 +155,29 @@ foreach my $package (getpackages()) {
 	foreach my $set (@install) {
 		my $dest;
 		my $tmpdest=0;
-		
+		my $prefix;
+
+		if (get_buildprofile("eos-app")) {
+			# Get the app prefix with the leading / stripped.
+			$prefix="endless/" . package_eos_app_id();
+		}
+
 		if (! defined $dh{AUTODEST} && @$set > 1) {
 			$dest=pop @$set;
+
+			# Adjust the destination if app prefix is set.
+			$dest=~s,^usr/,${prefix}/, if defined $prefix;
+			$dest=~s,^etc/,${prefix}/etc/, if defined $prefix;
+			$dest=~s,^var/,${prefix}/var/, if defined $prefix;
 		}
 
 		my @filelist;
 		foreach my $glob (@$set) {
+			# Adjust the glob if app prefix is set.
+			$glob=~s,^usr/,${prefix}/, if defined $prefix;
+			$glob=~s,^etc/,${prefix}/etc/, if defined $prefix;
+			$glob=~s,^var/,${prefix}/var/, if defined $prefix;
+
 			my @found = glob "$srcdir/$glob";
 			if (! compat(6)) {
 				# Fall back to looking in debian/tmp.

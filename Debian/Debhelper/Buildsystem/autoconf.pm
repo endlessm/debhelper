@@ -7,7 +7,8 @@
 package Debian::Debhelper::Buildsystem::autoconf;
 
 use strict;
-use Debian::Debhelper::Dh_Lib qw(dpkg_architecture_value sourcepackage compat);
+use Debian::Debhelper::Dh_Lib qw(dpkg_architecture_value sourcepackage compat
+				 get_buildprofile package_eos_app_id);
 use base 'Debian::Debhelper::Buildsystem::makefile';
 
 sub DESCRIPTION {
@@ -31,12 +32,22 @@ sub configure {
 	# Standard set of options for configure.
 	my @opts;
 	push @opts, "--build=" . dpkg_architecture_value("DEB_BUILD_GNU_TYPE");
-	push @opts, "--prefix=/usr";
+	if (get_buildprofile("eos-app")) {
+		# Build with the app id of the main package by default
+		my $app_prefix=package_eos_app_id();
+
+		push @opts, "--prefix=/endless/" . $app_prefix;
+		push @opts, "--sysconfdir=\${prefix}/etc";
+		push @opts, "--localstatedir=\${prefix}/var";
+	}
+	else {
+		push @opts, "--prefix=/usr";
+		push @opts, "--sysconfdir=/etc";
+		push @opts, "--localstatedir=/var";
+	}
 	push @opts, "--includedir=\${prefix}/include";
 	push @opts, "--mandir=\${prefix}/share/man";
 	push @opts, "--infodir=\${prefix}/share/info";
-	push @opts, "--sysconfdir=/etc";
-	push @opts, "--localstatedir=/var";
 	my $multiarch=dpkg_architecture_value("DEB_HOST_MULTIARCH");
 	if (! compat(8)) {
 	       if (defined $multiarch) {

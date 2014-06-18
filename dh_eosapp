@@ -1,0 +1,60 @@
+#!/usr/bin/perl -w
+
+=head1 NAME
+
+dh_eosapp - move installed files to application prefix
+
+=cut
+
+use strict;
+use Debian::Debhelper::Dh_Lib;
+
+=head1 SYNOPSIS
+
+B<dh_eosapp> [S<I<debhelper options>>]
+
+=head1 DESCRIPTION
+
+B<dh_eosapp> is a debhelper program that moves installed files from the
+typical /usr prefix to the application specific /endless/app prefix.
+
+It only operates when DEB_BUILD_PROFILES includes "eos-app".
+
+=cut
+
+init();
+
+if (! get_buildprofile("eos-app")) {
+	exit;
+}
+
+foreach my $package (@{$dh{DOPACKAGES}}) {
+	my $tmp=tmpdir($package);
+	my $app_id=package_eos_app_id($package);
+	my $cmd;
+
+	# Skip if there is no usr directory
+	if (! -d "${tmp}/usr") {
+		next;
+	}
+
+	# Create the endless prefix if necessary
+	doit("mkdir -p ${tmp}/endless/${app_id}");
+
+	# Move files from /usr to /endless/app and delete /usr
+	$cmd="tar -C ${tmp}/usr -cf- . | tar -C ${tmp}/endless/${app_id} -xpf-";
+	complex_doit($cmd);
+	doit("rm -rf ${tmp}/usr");
+}
+
+=head1 SEE ALSO
+
+L<debhelper(7)>
+
+This program is a part of debhelper.
+
+=head1 AUTHOR
+
+Dan Nicholson <nicholson@endlessm.com>
+
+=cut
