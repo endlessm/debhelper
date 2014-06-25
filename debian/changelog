@@ -1,3 +1,11 @@
+debhelper (9.20130630co2endless2) eos; urgency=low
+
+  * dh_install:
+    - Use package specific app id for install paths instead of main package
+      id.
+
+ -- Dan Nicholson <nicholson@endlessm.com>  Wed, 25 Jun 2014 11:31:09 -0700
+
 debhelper (9.20130630co2endless1) eos; urgency=low
 
   * Debian/Debhelper/Dh_Lib.pm:

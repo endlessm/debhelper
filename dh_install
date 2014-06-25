@@ -159,7 +159,7 @@ foreach my $package (getpackages()) {
 
 		if (get_buildprofile("eos-app")) {
 			# Get the app prefix with the leading / stripped.
-			$prefix="endless/" . package_eos_app_id();
+			$prefix="endless/" . package_eos_app_id($package);
 		}
 
 		if (! defined $dh{AUTODEST} && @$set > 1) {
