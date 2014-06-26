@@ -44,7 +44,7 @@ sub configure {
 	if (get_buildprofile("eos-app")) {
 		# Get package app id for prefix
 		my $app_prefix = package_eos_app_id();
-		push @flags, "-DCMAKE_INSTALL_PREFIX=" . $app_prefix;
+		push @flags, "-DCMAKE_INSTALL_PREFIX=/endless/" . $app_prefix;
 	}
 	else {
 		push @flags, "-DCMAKE_INSTALL_PREFIX=/usr";

@@ -69,7 +69,7 @@ sub configure {
 	if (get_buildprofile("eos-app")) {
 		# Build with the app id of the main package by default
 		my $app_prefix=package_eos_app_id();
-		push @flags, "PREFIX=" . $app_prefix;
+		push @flags, "PREFIX=/endless/" . $app_prefix;
 	}
 	else {
 		push @flags, "PREFIX=/usr";

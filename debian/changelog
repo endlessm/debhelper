@@ -1,3 +1,11 @@
+debhelper (9.20130630co2endless3) eos; urgency=medium
+
+  * Debian/Debhelper/Buildsystem/cmake.pm:
+  * Debian/Debhelper/Buildsystem/qmake.pm:
+    - Fix prefix to prepend /endless/ to the app id for eos-app profiles.
+
+ -- Dan Nicholson <nicholson@endlessm.com>  Thu, 26 Jun 2014 12:00:29 -0700
+
 debhelper (9.20130630co2endless2) eos; urgency=low
 
   * dh_install:
