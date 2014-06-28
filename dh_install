@@ -166,17 +166,17 @@ foreach my $package (getpackages()) {
 			$dest=pop @$set;
 
 			# Adjust the destination if app prefix is set.
-			$dest=~s,^/*usr/,${prefix}/, if defined $prefix;
-			$dest=~s,^/*etc/,${prefix}/etc/, if defined $prefix;
-			$dest=~s,^/*var/,${prefix}/var/, if defined $prefix;
+			$dest=~s,^/*usr(/|$),${prefix}$1, if defined $prefix;
+			$dest=~s,^/*etc(/|$),${prefix}/etc$1, if defined $prefix;
+			$dest=~s,^/*var(/|$),${prefix}/var$1, if defined $prefix;
 		}
 
 		my @filelist;
 		foreach my $glob (@$set) {
 			# Adjust the glob if app prefix is set.
-			$glob=~s,^/*usr/,${prefix}/, if defined $prefix;
-			$glob=~s,^/*etc/,${prefix}/etc/, if defined $prefix;
-			$glob=~s,^/*var/,${prefix}/var/, if defined $prefix;
+			$glob=~s,^/*usr(/|$),${prefix}$1, if defined $prefix;
+			$glob=~s,^/*etc(/|$),${prefix}/etc$1, if defined $prefix;
+			$glob=~s,^/*var(/|$),${prefix}/var$1, if defined $prefix;
 
 			my @found = glob "$srcdir/$glob";
 			if (! compat(6)) {

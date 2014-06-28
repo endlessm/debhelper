@@ -18,6 +18,9 @@ B<dh_installdirs> [S<I<debhelper options>>] [B<-A>] [S<I<dir> ...>]
 B<dh_installdirs> is a debhelper program that is responsible for creating
 subdirectories in package build directories.
 
+When the environment variable B<DEB_BUILD_PROFILES> contains B<eos-app>,
+directories will be created in the app specific prefix of F</endless>.
+
 =head1 FILES
 
 =over 4
@@ -69,6 +72,18 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 	}	
 
 	if (@dirs) {
+		# Adjust the directories for eos-app profiles.
+		if (get_buildprofile("eos-app")) {
+			my $prefix="endless/" . package_eos_app_id($package);
+
+			@dirs=map {
+				s,^/*usr(/|$),${prefix}$1,;
+				s,^/*etc(/|$),${prefix}/etc$1,;
+				s,^/*var(/|$),${prefix}/var$1,;
+				$_
+			} @dirs;
+		}
+
 		# Stick the $tmp onto the front of all the dirs.
 		# This is necessary, for 2 reasons, one to make them 
 		# be in the right directory, but more importantly, it 

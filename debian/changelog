@@ -1,3 +1,12 @@
+debhelper (9.20130630co2endless5) eos; urgency=low
+
+  * dh_install: Handle lack of trailing / in paths when the install file
+    specifies the entire usr, etc or var directory.
+  * dh_installdirs: Prepend /endless app prefix to installation directories
+    for eos-app profiles.
+
+ -- Dan Nicholson <nicholson@endlessm.com>  Mon, 30 Jun 2014 07:17:26 -0700
+
 debhelper (9.20130630co2endless4) eos; urgency=low
 
   * dh_install: Handle absolute paths install file specifications. These
