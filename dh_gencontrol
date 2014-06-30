@@ -23,6 +23,9 @@ This program is merely a wrapper around L<dpkg-gencontrol(1)>, which calls
 it once for each package being acted on, and passes in some additional
 useful flags.
 
+When the environment variable B<DEB_BUILD_PROFILES> contains B<eos-app>,
+each package will have the Eos-Appid field added to the control file.
+
 =head1 OPTIONS
 
 =over 4
@@ -68,6 +71,10 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 	my @command="dpkg-gencontrol";
 	if (getpackages() > 1) {
 		push @command, "-p$package";
+	}
+	if (get_buildprofile("eos-app")) {
+		# Add the app id field.
+		push @command, "-DEos-Appid=" . package_eos_app_id($package);
 	}
 	doit(@command, "-l$changelog", "-T$substvars", 
 		"-P$tmp",@{$dh{U_PARAMS}});

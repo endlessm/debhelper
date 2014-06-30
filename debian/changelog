@@ -1,3 +1,9 @@
+debhelper (9.20130630co2endless6) eos; urgency=low
+
+  * dh_gencontrol: Always add Eos-Appid control field for eos-app profiles.
+
+ -- Dan Nicholson <nicholson@endlessm.com>  Mon, 30 Jun 2014 11:57:34 -0700
+
 debhelper (9.20130630co2endless5) eos; urgency=low
 
   * dh_install: Handle lack of trailing / in paths when the install file
