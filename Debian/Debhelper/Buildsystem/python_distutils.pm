@@ -9,7 +9,7 @@ package Debian::Debhelper::Buildsystem::python_distutils;
 
 use strict;
 use Cwd ();
-use Debian::Debhelper::Dh_Lib qw(error);
+use Debian::Debhelper::Dh_Lib qw(error get_buildprofile package_eos_app_id);
 use base 'Debian::Debhelper::Buildsystem';
 
 sub DESCRIPTION {
@@ -185,11 +185,18 @@ sub build {
 sub install {
 	my $this=shift;
 	my $destdir=shift;
+	my $prefix_opt="";
+	if (get_buildprofile("eos-app")) {
+		# Build with the app id of the main package by default
+		my $app_prefix=package_eos_app_id();
+		$prefix_opt="--prefix=/endless/" . $app_prefix;
+	}
 	$this->setup_py("install",
 		"--force",
 		"--root=$destdir",
 		"--no-compile",
 		"-O0",
+		$prefix_opt,
 		@_);
 }
 
