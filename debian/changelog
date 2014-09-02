@@ -1,3 +1,12 @@
+debhelper (9.20130630co2endless9) eos; urgency=low
+
+  [ Andreas Beckmann ]
+  * dh_installdeb: Add support for dpkg-maintscript-helper commands
+    symlink_to_dir and dir_to_symlink that were added in dpkg 1.17.2.
+    Closes: #731723
+
+ -- Dan Nicholson <nicholson@endlessm.com>  Tue, 02 Sep 2014 15:15:11 -0700
+
 debhelper (9.20130630co2endless8) eos; urgency=low
 
   * Debian/Debhelper/Buildsystem/python_distutils.pm:
