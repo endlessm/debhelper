@@ -45,6 +45,9 @@ sub configure {
 		# Get package app id for prefix
 		my $app_prefix = package_eos_app_id();
 		push @flags, "-DCMAKE_INSTALL_PREFIX=/endless/" . $app_prefix;
+
+		# Always include the RPATH from the app link paths.
+		push @flags, "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON";
 	}
 	else {
 		push @flags, "-DCMAKE_INSTALL_PREFIX=/usr";

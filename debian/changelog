@@ -1,3 +1,11 @@
+debhelper (9.20130630co2endless10) eos; urgency=low
+
+  * Debian/Debhelper/Buildsystem/cmake.pm:
+    - Force usage of RPATH for the eos-app build profile.
+  [endlessm/eos-shell#3608]
+
+ -- Dan Nicholson <nicholson@endlessm.com>  Mon, 08 Sep 2014 12:16:49 -0700
+
 debhelper (9.20130630co2endless9) eos; urgency=low
 
   [ Andreas Beckmann ]
