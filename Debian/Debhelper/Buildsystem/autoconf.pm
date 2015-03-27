@@ -48,6 +48,9 @@ sub configure {
 	push @opts, "--includedir=\${prefix}/include";
 	push @opts, "--mandir=\${prefix}/share/man";
 	push @opts, "--infodir=\${prefix}/share/info";
+	if (defined $ENV{DH_VERBOSE} && $ENV{DH_VERBOSE} ne "") {
+		push @opts, "--disable-silent-rules";
+	}
 	my $multiarch=dpkg_architecture_value("DEB_HOST_MULTIARCH");
 	if (! compat(8)) {
 	       if (defined $multiarch) {

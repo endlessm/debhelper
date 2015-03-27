@@ -69,14 +69,11 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 	
 	# Generate and install control file.
 	my @command="dpkg-gencontrol";
-	if (getpackages() > 1) {
-		push @command, "-p$package";
-	}
 	if (get_buildprofile("eos-app")) {
 		# Add the app id field.
 		push @command, "-DEos-Appid=" . package_eos_app_id($package);
 	}
-	doit(@command, "-l$changelog", "-T$substvars", 
+	doit(@command, "-p$package", "-l$changelog", "-T$substvars", 
 		"-P$tmp",@{$dh{U_PARAMS}});
 
 	# This chmod is only necessary if the user sets the umask to
