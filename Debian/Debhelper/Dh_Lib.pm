@@ -834,7 +834,7 @@ sub getpackages {
 		if (/^(?:X[BC]*-)?Package-Type:\s*(.*)/) {
 			$package_type=$1;
 		}
-		if (/^(?:XCBS-)?EOS-AppId:\s*(.*)/) {
+		if (/^(?:X[CBS]*-)?Eos-Appid:\s*(.*)/i) {
 			$eos_app_id=$1;
 		}
 		
