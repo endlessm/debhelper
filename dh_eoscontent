@@ -1,0 +1,151 @@
+#!/usr/bin/perl -w
+
+=head1 NAME
+
+dh_eoscontent - merge Endless content into packages
+
+=cut
+
+use strict;
+use Debian::Debhelper::Dh_Lib;
+use JSON;
+use Config::Tiny
+
+=head1 SYNOPSIS
+
+B<dh_eoscontent> [S<I<debhelper options>>]
+
+=head1 DESCRIPTION
+
+B<dh_eoscontent> is a debhelper program that merges content from the
+eos-shell-content and eos-shell-content-dev packages into the package.
+Currently this applies only to desktop files.
+
+=cut
+
+init();
+
+# Parse out content.json
+my $filename = '/usr/share/application-store/Default/apps/content.json';
+my $json_text = do {
+	open(CONTENT, "<:encoding(UTF-8)", $filename) ||
+	    error("cannot read $filename: $!\n");
+	local $/;
+	<CONTENT>
+};
+my $content = JSON->new->utf8->decode($json_text);
+
+sub app_content {
+	my $app_id=shift;
+	my $package=shift;
+
+	for my $app (@$content) {
+		next if $app_id ne $app->{'application-id'};
+
+		# Make sure this is the right package
+		if ($package eq $app_id) {
+			return $app;
+		} elsif (exists $app->{package}) {
+			return $app if $package eq $app->{package}
+		}
+	}
+}
+
+sub merge_desktop_files {
+	my $app_id=shift;
+	my $prefix=shift;
+	my $tmp=shift;
+	my $app_data=shift;
+
+	# Get the content desktop file
+	my $inpath;
+	if ($app_data->{core} eq 'true') {
+		$inpath = '/usr/share/applications/eos-app-' .
+		    $app_id . '.desktop';
+	} else {
+		$inpath = '/usr/share/eos-shell-content/bundle/desktops/' .
+		    $app_id . '.desktop';
+	}
+	verbose_print("Reading input desktop file $inpath");
+
+	# Get the output desktop file
+	my $outpath = $tmp . $prefix . '/share/applications/' . $app_id . '.desktop';
+
+	my $indesktop = Config::Tiny->read($inpath);
+	my $outdesktop;
+	if (-e $outpath) {
+		$outdesktop = Config::Tiny->read($outpath);
+	} else {
+		$outdesktop = Config::Tiny->new;
+		# Create a stub Desktop Entry section
+		$outdesktop->{'Desktop Entry'} = {
+			Version => '1.0',
+			Type => 'Application',
+		};
+	}
+
+	my $inentry = $indesktop->{'Desktop Entry'};
+	my $outentry = $outdesktop->{'Desktop Entry'};
+
+	# Delete existing Name and Comment fields so old translations
+	# aren't kept around
+	if ($inentry->{Name}) {
+		foreach my $field (keys(%$outentry)) {
+			next if $field !~ /^Name/;
+			verbose_print("Deleting field $field from $outpath");
+			delete $outentry->{$field};
+		}
+	}
+	if ($inentry->{Comment}) {
+		foreach my $field (keys(%$outentry)) {
+			next if $field !~ /^Comment/;
+			verbose_print("Deleting field $field from $outpath");
+			delete $outentry->{$field};
+		}
+	}
+
+	# Copy all fields except Categories, which is joined
+	foreach my $field (keys(%$inentry)) {
+		verbose_print("Adding field $field to $outpath");
+		if ($field eq 'Categories') {
+			$outentry->{$field} .= $inentry->{$field};
+		} else {
+			$outentry->{$field} = $inentry->{$field};
+		}
+	}
+
+	doit("mkdir", "-p", dirname($outpath));
+	$outdesktop->write($outpath);
+}
+
+foreach my $package (@{$dh{DOPACKAGES}}) {
+	my $tmp=tmpdir($package);
+	my $app_id=package_eos_app_id($package);
+	my $prefix='/usr';
+	my $app_data;
+
+	next if not defined $app_id;
+
+	$app_data = app_content($app_id, $package);
+	next if not $app_data;
+	verbose_print("Found content for app $app_id");
+
+	if (get_buildprofile("eos-app")) {
+		# Get the app prefix with the leading / stripped.
+		$prefix = "/endless/" . $app_id;
+	}
+
+	merge_desktop_files($app_id, $prefix, $tmp, $app_data);
+}
+
+=head1 SEE ALSO
+
+L<debhelper(7)>
+
+This program is a part of debhelper.
+
+=head1 AUTHOR
+
+Dan Nicholson <nicholson@endlessm.com>
+
+=cut
