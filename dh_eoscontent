@@ -21,6 +21,9 @@ B<dh_eoscontent> is a debhelper program that merges content from the
 eos-shell-content and eos-shell-content-dev packages into the package.
 Currently this applies only to desktop files.
 
+It also substitutes a variable, B<${eos:Content-Version}>, containing
+the version field from content.json in eos-shell-content.
+
 =cut
 
 init();
@@ -136,6 +139,9 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 	}
 
 	merge_desktop_files($app_id, $prefix, $tmp, $app_data);
+
+	# Substitute the version from content.json
+	addsubstvar($package, "eos:Content-Version", $app_data->{version});
 }
 
 =head1 SEE ALSO
