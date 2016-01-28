@@ -29,6 +29,9 @@ desktop files that have it set. It makes all files in the standard F<bin> and
 F<sbin> directories, F<usr/games/> and F<etc/init.d> executable (since v4). Finally,
 it removes the setuid and setgid bits from all files in the package.
 
+If a build profile within B<DEB_BUILD_PROFILES> specifies a non-/usr
+prefix, files and directories with that prefix will also be fixed.
+
 =head1 OPTIONS
 
 =over 4
@@ -49,7 +52,22 @@ my $vendorlib = substr $Config{vendorlib}, 1;
 my $vendorarch = substr $Config{vendorarch}, 1;
 
 foreach my $package (@{$dh{DOPACKAGES}}) {
+	my @prefixes=("usr");
+	my $prefix=substr get_buildprefix(), 1;
+	push @prefixes, $prefix if $prefix ne "usr";
+
+	foreach my $prefix (@prefixes) {
 	my $tmp=tmpdir($package);
+
+	# Adjust a few other non-/usr paths
+	my $etcdir="etc";
+	my $perlvendorlib=$vendorlib;
+	my $perlvendorarch=$vendorarch;
+	if ($prefix ne "usr") {
+		$etcdir="$prefix/etc";
+		$perlvendorlib=~s,^usr/,$prefix/,;
+		$perlvendorarch=~s,^usr/,$prefix/,;
+	}
 
 	my $find_options='';
 	if (defined($dh{EXCLUDE_FIND}) && $dh{EXCLUDE_FIND} ne '') {
@@ -64,13 +82,13 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 	
 	# Fix up permissions in usr/share/doc, setting everything to not
 	# executable by default, but leave examples directories alone.
-	complex_doit("find $tmp/usr/share/doc -type f $find_options ! -regex '$tmp/usr/share/doc/[^/]*/examples/.*' -print0 2>/dev/null",
+	complex_doit("find $tmp/$prefix/share/doc -type f $find_options ! -regex '$tmp/$prefix/share/doc/[^/]*/examples/.*' -print0 2>/dev/null",
 		"| xargs -0r chmod 644");
-	complex_doit("find $tmp/usr/share/doc -type d $find_options -print0 2>/dev/null",
+	complex_doit("find $tmp/$prefix/share/doc -type d $find_options -print0 2>/dev/null",
 		"| xargs -0r chmod 755");
 
 	# Executable man pages are a bad thing..
-	complex_doit("find $tmp/usr/share/man $tmp/usr/man/ $tmp/usr/X11*/man/ -type f",
+	complex_doit("find $tmp/$prefix/share/man $tmp/$prefix/man/ $tmp/$prefix/X11*/man/ -type f",
 		"$find_options -print0 2>/dev/null | xargs -0r chmod 644");
 
 	# ..and so are executable shared and static libraries 
@@ -80,11 +98,11 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 		"2>/dev/null | xargs -0r chmod 644");
 	
 	# ..and header files ..
-	complex_doit("find $tmp/usr/include -type f $find_options -print0",
+	complex_doit("find $tmp/$prefix/include -type f $find_options -print0",
 		"2>/dev/null | xargs -0r chmod 644");
 	
 	# ..and desktop files ..
-	complex_doit("find $tmp/usr/share/applications -type f $find_options -print0",
+	complex_doit("find $tmp/$prefix/share/applications -type f $find_options -print0",
 		"2>/dev/null | xargs -0r chmod 644");
 
 	# ..and OCaml native-code shared objects ..
@@ -93,14 +111,14 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 		"2>/dev/null | xargs -0r chmod 644");
 	
 	# .. and perl modules.
-	complex_doit("find $tmp/$vendorarch $tmp/$vendorlib -type f",
+	complex_doit("find $tmp/$perlvendorarch $tmp/$perlvendorlib -type f",
 		"-perm -5 -name '*.pm' $find_options -print0",
 		"2>/dev/null | xargs -0r chmod a-X");
 	
 	# v4 and up
 	if (! compat(3)) {
 		# Programs in the bin and init.d dirs should be executable..
-		for my $dir (qw{usr/bin bin usr/sbin sbin usr/games etc/init.d}) {
+		for my $dir (qw{$prefix/bin bin $prefix/sbin sbin $prefix/games $etcdir/init.d}) {
 			if (-d "$tmp/$dir") {
 				complex_doit("find $tmp/$dir -type f $find_options -print0 2>/dev/null",
 					"| xargs -0r chmod a+x");
@@ -109,22 +127,23 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 	}
 	
 	# ADA ali files should be mode 444 to avoid recompilation
-	complex_doit("find $tmp/usr/lib -type f",
+	complex_doit("find $tmp/$prefix/lib -type f",
 		"-name '*.ali' $find_options -print0",
 		"2>/dev/null | xargs -0r chmod uga-w");
 
 	# Lintian overrides should never be executable, too.
-	if (-d "$tmp/usr/share/lintian") {
-		complex_doit("find $tmp/usr/share/lintian/overrides",
+	if (-d "$tmp/$prefix/share/lintian") {
+		complex_doit("find $tmp/$prefix/share/lintian/overrides",
 			"-type f $find_options -print0",
 			"2>/dev/null | xargs -0r chmod 644");
 	}
 
 	# Files in $tmp/etc/sudoers.d/ must be mode 440.
-	if (-d "$tmp/etc/sudoers.d") {
-		complex_doit("find $tmp/etc/sudoers.d",
+	if (-d "$tmp/$etcdir/sudoers.d") {
+		complex_doit("find $tmp/$etcdir/sudoers.d",
 			"-type f ! -perm 440 $find_options -print0",
 			"2>/dev/null | xargs -0r chmod 440");
+	}
 	}
 }
 
