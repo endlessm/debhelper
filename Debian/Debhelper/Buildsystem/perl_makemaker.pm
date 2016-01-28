@@ -7,7 +7,7 @@
 package Debian::Debhelper::Buildsystem::perl_makemaker;
 
 use strict;
-use Debian::Debhelper::Dh_Lib qw(compat);
+use Debian::Debhelper::Dh_Lib qw(compat get_buildprefix);
 use base 'Debian::Debhelper::Buildsystem::makefile';
 use Config;
 
@@ -46,6 +46,10 @@ sub configure {
 	$ENV{PERL_MM_USE_DEFAULT}=1;
 	# This prevents  Module::Install from interactive behavior.
 	$ENV{PERL_AUTOINSTALL}="--skipdeps";
+
+	# Adjust prefix for non-/usr builds
+	my $prefix=get_buildprefix();
+	push @flags, "PREFIX=$prefix" if $prefix ne "/usr";
 
 	if ($ENV{CFLAGS} && ! compat(8)) {
 		push @flags, "OPTIMIZE=$ENV{CFLAGS} $ENV{CPPFLAGS}";
