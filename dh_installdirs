@@ -18,8 +18,8 @@ B<dh_installdirs> [S<I<debhelper options>>] [B<-A>] [S<I<dir> ...>]
 B<dh_installdirs> is a debhelper program that is responsible for creating
 subdirectories in package build directories.
 
-When the environment variable B<DEB_BUILD_PROFILES> contains B<eos-app>,
-directories will be created in the app specific prefix of F</endless>.
+If a build profile within B<DEB_BUILD_PROFILES> specifies a non-/usr
+prefix, the directories will be adjusted to use that prefix.
 
 =head1 FILES
 
