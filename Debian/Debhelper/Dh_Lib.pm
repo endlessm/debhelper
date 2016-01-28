@@ -1075,7 +1075,10 @@ sub get_buildprefix {
 	my $package=shift;
 	my $prefix="/usr";
 
-	if (get_buildprofile("eos-app")) {
+	if (get_buildprofile("xdg-app")) {
+		# Xdg-App always uses /app for prefix
+		$prefix="/app";
+	} elsif (get_buildprofile("eos-app")) {
 		$prefix="/endless/" . package_eos_app_id($package);
 	}
 
