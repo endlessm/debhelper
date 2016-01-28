@@ -394,7 +394,6 @@ my @i = qw{
 	dh_installxfonts
 	dh_compress
 	dh_fixperms
-	dh_eosapp
 };
 my @ba=qw{
 	dh_strip
