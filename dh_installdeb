@@ -19,6 +19,9 @@ B<dh_installdeb> is a debhelper program that is responsible for installing
 files into the F<DEBIAN> directories in package build directories with the
 correct permissions.
 
+If a build profile within B<DEB_BUILD_PROFILES> specifies a non-/usr
+prefix, files will be moved from F</usr> to the appropriate prefix.
+
 =head1 FILES
 
 =over 4
@@ -78,6 +81,18 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 
 	if (! -d "$tmp/DEBIAN") {
 		doit("install","-o",0,"-g",0,"-d","$tmp/DEBIAN");
+	}
+
+	# Migrate files to non-/usr prefix
+	my $prefix=substr get_buildprefix($package), 1;
+	if ($prefix ne "usr" && -d "$tmp/usr") {
+		# Create the prefix if necessary
+		doit("install", "-d", "-o", 0, "-g", 0, "$tmp/$prefix");
+
+		# Move files from /usr to prefix and delete /usr
+		my $cmd="tar -C $tmp/usr -cf- . | tar -C $tmp/$prefix -xpf-";
+		complex_doit($cmd);
+		doit("rm", "-rf", "$tmp/usr");
 	}
 
 	if (is_udeb($package)) {
