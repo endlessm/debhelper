@@ -8,7 +8,7 @@ package Debian::Debhelper::Buildsystem::qmake;
 
 use strict;
 use warnings;
-use Debian::Debhelper::Dh_Lib qw(error get_buildprofile package_eos_app_id);
+use Debian::Debhelper::Dh_Lib qw(error get_buildprefix);
 use base 'Debian::Debhelper::Buildsystem::makefile';
 
 our $qmake="qmake";
@@ -66,14 +66,7 @@ sub configure {
 		push @flags, "QMAKE_LFLAGS_DEBUG=$ENV{LDFLAGS}";
 	}
 	push @flags, "QMAKE_STRIP=:";
-	if (get_buildprofile("eos-app")) {
-		# Build with the app id of the main package by default
-		my $app_prefix=package_eos_app_id();
-		push @flags, "PREFIX=/endless/" . $app_prefix;
-	}
-	else {
-		push @flags, "PREFIX=/usr";
-	}
+	push @flags, "PREFIX=" . get_buildprefix();
 
 	$this->doit_in_builddir($qmake, @options, @flags, @_);
 }

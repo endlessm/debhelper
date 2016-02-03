@@ -7,7 +7,7 @@
 package Debian::Debhelper::Buildsystem::cmake;
 
 use strict;
-use Debian::Debhelper::Dh_Lib qw(compat get_buildprofile package_eos_app_id);
+use Debian::Debhelper::Dh_Lib qw(compat get_buildprefix);
 use base 'Debian::Debhelper::Buildsystem::makefile';
 
 sub DESCRIPTION {
@@ -39,21 +39,16 @@ sub new {
 sub configure {
 	my $this=shift;
 	my @flags;
+	my $prefix=get_buildprefix();
 
 	# Standard set of cmake flags
-	if (get_buildprofile("eos-app")) {
-		# Get package app id for prefix
-		my $app_prefix = package_eos_app_id();
-		push @flags, "-DCMAKE_INSTALL_PREFIX=/endless/" . $app_prefix;
-
+	push @flags, "-DCMAKE_INSTALL_PREFIX=$prefix";
+	push @flags, "-DCMAKE_VERBOSE_MAKEFILE=ON";
+	push @flags, "-DCMAKE_BUILD_TYPE=None";
+	if ($prefix ne "/usr") {
 		# Always include the RPATH from the app link paths.
 		push @flags, "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON";
 	}
-	else {
-		push @flags, "-DCMAKE_INSTALL_PREFIX=/usr";
-	}
-	push @flags, "-DCMAKE_VERBOSE_MAKEFILE=ON";
-	push @flags, "-DCMAKE_BUILD_TYPE=None";
 
 	# CMake doesn't respect CPPFLAGS, see #653916.
 	if ($ENV{CPPFLAGS} && ! compat(8)) {

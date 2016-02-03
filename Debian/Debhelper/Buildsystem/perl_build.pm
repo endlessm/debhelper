@@ -7,7 +7,7 @@
 package Debian::Debhelper::Buildsystem::perl_build;
 
 use strict;
-use Debian::Debhelper::Dh_Lib qw(compat);
+use Debian::Debhelper::Dh_Lib qw(compat get_buildprefix);
 use base 'Debian::Debhelper::Buildsystem';
 use Config;
 
@@ -42,6 +42,9 @@ sub configure {
 	my $this=shift;
 	my @flags;
 	$ENV{PERL_MM_USE_DEFAULT}=1;
+	# Adjust prefix for non-/usr builds
+	my $prefix=get_buildprefix();
+	push @flags, "--prefix", $prefix if $prefix ne "/usr";
 	if ($ENV{CFLAGS} && ! compat(8)) {
 		push @flags, "--config", "optimize=$ENV{CFLAGS} $ENV{CPPFLAGS}";
 	}

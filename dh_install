@@ -35,6 +35,10 @@ From debhelper compatibility level 7 on, B<dh_install> will fall back to
 looking in F<debian/tmp> for files, if it doesn't find them in the current
 directory (or wherever you've told it to look using B<--sourcedir>).
 
+If a build profile within B<DEB_BUILD_PROFILES> specifies a non-/usr
+prefix, the source paths and target destination will be adjusted to use
+that prefix.
+
 =head1 FILES
 
 =over 4
@@ -155,28 +159,23 @@ foreach my $package (getpackages()) {
 	foreach my $set (@install) {
 		my $dest;
 		my $tmpdest=0;
-		my $prefix;
-
-		if (get_buildprofile("eos-app")) {
-			# Get the app prefix with the leading / stripped.
-			$prefix="endless/" . package_eos_app_id($package);
-		}
+		my $prefix=substr get_buildprefix($package), 1;
 
 		if (! defined $dh{AUTODEST} && @$set > 1) {
 			$dest=pop @$set;
 
 			# Adjust the destination if app prefix is set.
-			$dest=~s,^/*usr(/|$),${prefix}$1, if defined $prefix;
-			$dest=~s,^/*etc(/|$),${prefix}/etc$1, if defined $prefix;
-			$dest=~s,^/*var(/|$),${prefix}/var$1, if defined $prefix;
+			$dest=~s,^/*usr(/|$),${prefix}$1, if $prefix ne "usr";
+			$dest=~s,^/*etc(/|$),${prefix}/etc$1, if $prefix ne "usr";
+			$dest=~s,^/*var(/|$),${prefix}/var$1, if $prefix ne "usr";
 		}
 
 		my @filelist;
 		foreach my $glob (@$set) {
 			# Adjust the glob if app prefix is set.
-			$glob=~s,^/*usr(/|$),${prefix}$1, if defined $prefix;
-			$glob=~s,^/*etc(/|$),${prefix}/etc$1, if defined $prefix;
-			$glob=~s,^/*var(/|$),${prefix}/var$1, if defined $prefix;
+			$glob=~s,^/*usr(/|$),${prefix}$1, if $prefix ne "usr";
+			$glob=~s,^/*etc(/|$),${prefix}/etc$1, if $prefix ne "usr";
+			$glob=~s,^/*var(/|$),${prefix}/var$1, if $prefix ne "usr";
 
 			my @found = glob "$srcdir/$glob";
 			if (! compat(6)) {

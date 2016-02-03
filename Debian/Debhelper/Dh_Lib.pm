@@ -20,7 +20,7 @@ use vars qw(@ISA @EXPORT %dh);
 	    &dpkg_architecture_value &sourcepackage
 	    &is_make_jobserver_unavailable &clean_jobserver_makeflags
 	    &cross_command &set_buildflags &get_buildoption
-	    &get_buildprofile &package_eos_app_id);
+	    &get_buildprofile &get_buildprefix &package_eos_app_id);
 
 my $max_compat=10;
 
@@ -1067,6 +1067,22 @@ sub get_buildprofile {
 			return 1;
 		}
 	}
+}
+
+# Determine the prefix for the build based on the build profile. This is
+# /usr except for app builds.
+sub get_buildprefix {
+	my $package=shift;
+	my $prefix="/usr";
+
+	if (get_buildprofile("xdg-app")) {
+		# Xdg-App always uses /app for prefix
+		$prefix="/app";
+	} elsif (get_buildprofile("eos-app")) {
+		$prefix="/endless/" . package_eos_app_id($package);
+	}
+
+	return $prefix;
 }
 
 1
