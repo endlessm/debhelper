@@ -118,7 +118,7 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 	# v4 and up
 	if (! compat(3)) {
 		# Programs in the bin and init.d dirs should be executable..
-		for my $dir (qw{$prefix/bin bin $prefix/sbin sbin $prefix/games $etcdir/init.d}) {
+		for my $dir ("$prefix/bin", "bin", "$prefix/sbin", "sbin", "$prefix/games", "$etcdir/init.d") {
 			if (-d "$tmp/$dir") {
 				complex_doit("find $tmp/$dir -type f $find_options -print0 2>/dev/null",
 					"| xargs -0r chmod a+x");
