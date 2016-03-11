@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 =head1 NAME
 
@@ -7,6 +7,7 @@ dh_shlibdeps - calculate shared library dependencies
 =cut
 
 use strict;
+use warnings;
 use Cwd;
 use Debian::Debhelper::Dh_Lib;
 
@@ -65,6 +66,9 @@ It tells B<dpkg-shlibdeps> (via its B<-S> parameter) to look first in the packag
 build directory for the specified package, when searching for libraries,
 symbol files, and shlibs files.
 
+If needed, this can be passed multiple times with different package
+names.
+
 =back
 
 =head1 EXAMPLES
@@ -90,9 +94,9 @@ on libbar1 as follows:
 =cut
 
 init(options => {
-	"L|libpackage=s" => \$dh{LIBPACKAGE},
-	"dpkg-shlibdeps-params=s", => \$dh{U_PARAMS},
-	"l=s", => \$dh{L_PARAMS},
+	"L|libpackage=s@" => \$dh{LIBPACKAGE},
+	"dpkg-shlibdeps-params=s" => \$dh{U_PARAMS},
+	"l=s" => \$dh{L_PARAMS},
 });
 
 if (defined $dh{V_FLAG}) {
@@ -105,7 +109,7 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 
 	# dpkg-shlibdeps expects this directory to exist
 	if (! -d "$tmp/DEBIAN") {
-		doit("install","-o",0,"-g",0,"-d","$tmp/DEBIAN");
+		install_dir("$tmp/DEBIAN");
 	}
 
 	my @filelist;
@@ -117,7 +121,7 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 	if (defined($dh{EXCLUDE_FIND}) && $dh{EXCLUDE_FIND} ne '') {
 		$find_options="! \\( $dh{EXCLUDE_FIND} \\)";
 	}
-	foreach my $file (split(/\n/,`find $tmp -type f \\( -perm /111 -or -name "*.so*" -or -name "*.cmxs" \\) $find_options -print`)) {
+	foreach my $file (split(/\n/,`find $tmp -type f \\( -perm /111 -or -name "*.so*" -or -name "*.cmxs" -or -name "*.node" \\) $find_options -print`)) {
 		# Prune directories that contain separated debug symbols.
 		next if $file=~m!^\Q$tmp\E/usr/lib/debug/(lib|lib64|usr|bin|sbin|opt|dev|emul)/!;
 		# TODO this is slow, optimize. Ie, file can run once on
@@ -130,8 +134,8 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 
 	if (@filelist) {
 		my @opts;
-		if (defined $dh{LIBPACKAGE} && length $dh{LIBPACKAGE}) {
-			@opts=("-S".tmpdir($dh{LIBPACKAGE}));
+		if (defined($dh{LIBPACKAGE})) {
+			@opts = map { '-S' . tmpdir($_) } @{$dh{LIBPACKAGE}};
 		}
 		
 		push @opts, "-tudeb" if is_udeb($package);
@@ -160,3 +164,9 @@ This program is a part of debhelper.
 Joey Hess <joeyh@debian.org>
 
 =cut
+
+# Local Variables:
+# indent-tabs-mode: t
+# tab-width: 4
+# cperl-indent-level: 4
+# End:

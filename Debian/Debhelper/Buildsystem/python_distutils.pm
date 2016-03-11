@@ -8,9 +8,10 @@
 package Debian::Debhelper::Buildsystem::python_distutils;
 
 use strict;
+use warnings;
 use Cwd ();
 use Debian::Debhelper::Dh_Lib qw(error get_buildprefix);
-use base 'Debian::Debhelper::Buildsystem';
+use parent qw(Debian::Debhelper::Buildsystem);
 
 sub DESCRIPTION {
 	"Python Distutils (setup.py)"
@@ -212,3 +213,9 @@ sub clean {
 }
 
 1
+
+# Local Variables:
+# indent-tabs-mode: t
+# tab-width: 4
+# cperl-indent-level: 4
+# End:

@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 =head1 NAME
 
@@ -31,6 +31,7 @@ program from your rules file.
 =cut
 
 use strict;
+use warnings;
 use Debian::Debhelper::Dh_Lib;
 init();
 
@@ -86,7 +87,7 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 			warning("$file has odd gid $gid not in /etc/group");
 			$group=$gid;
 		}
-		# Note that I have to print mode in ocal, stripping file
+		# Note that I have to print mode in octal, stripping file
 		# type.
 		my $sedstr=sprintf("s:#FILE#:$file:;s/#PACKAGE#/$package/;s/#OWNER#/$user/;s/#GROUP#/$group/;s/#PERMS#/%#o/",
                                    $mode & 07777);
@@ -125,3 +126,9 @@ This program is a part of debhelper.
 Joey Hess <joeyh@debian.org>
 
 =cut
+
+# Local Variables:
+# indent-tabs-mode: t
+# tab-width: 4
+# cperl-indent-level: 4
+# End:

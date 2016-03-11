@@ -1,3 +1,513 @@
+debhelper (9.20160115) unstable; urgency=medium
+
+  * Fix brown paper bag bug that caused many packages to
+    FTBFS when dh_update_autotools_config was called.
+    (Closes: #811052)
+  * Revert removal of autoscripts/*-makeshlibs.  Some packages
+    injected them directly into their maintainer scripts.
+    (Closes: #811038)
+
+ -- Niels Thykier <niels@thykier.net>  Fri, 15 Jan 2016 20:28:37 +0000
+
+debhelper (9.20160114) unstable; urgency=low
+
+  [ Niels Thykier ]
+  * Dh_Lib.pm: Pass "-S" to dpkg-parsechangelog when requesting
+    the Version field.
+  * Drop compat level 3.
+  * dh_install: Only fallback to debian/tmp if the given glob
+    does not start with debian/tmp.  This should make the
+    output on failures less weird.
+  * autoscripts/*-makeshlibs: Removed, no longer used.
+  * dh: In compat 10, drop the manual sequence control arguments
+    and the sequence log files.  (Closes: #510855)
+  * dh_update_autotools_config: New helper to update config.sub
+    and config.guess.
+  * dh: Run dh_update_autotools_config before dh_auto_configure.
+    (Closes: #733045)
+  * d/control: Add dependency on autotools-dev for the new
+    dh_update_autotools_config tool.
+  * dh_installinit: Correct the "PROMISE NOOP" clause to account
+    for /etc/tmpfiles.d and /usr/lib/tmpfiles.d.
+  * dh_strip: Add "--(no-)automatic-dbgsym" and "--dbgsym-migration"
+    options to replace "--(no-)ddebs" and "--ddeb-migration".
+    (Closes: #810948)
+
+  [ Dmitry Shachnev ]
+  * dh_install: Fail because of missing files only after processing
+    all file lists for all packages.  (Closes: #488346)
+
+ -- Niels Thykier <niels@thykier.net>  Thu, 14 Jan 2016 22:01:03 +0000
+
+debhelper (9.20151225) unstable; urgency=medium
+
+  * dh_installmanpages: Fix call to getpackages.  Thanks to
+    Niko Tyni for reporting the issue.  (Closes: #808603)
+  * Dh_Lib.pm: Restore the behaviour of getpackages(), which
+    is slightly different from getpackages('both').  Fixes
+    a regression introduced in 9.20151220.
+
+ -- Niels Thykier <niels@thykier.net>  Fri, 25 Dec 2015 14:39:18 +0000
+
+debhelper (9.20151220) unstable; urgency=medium
+
+  * dh_strip: Document that dbgsym packages are built by
+    default.
+  * Dh_Lib: Cache the results of getpackages.
+  * dh_gencontrol: Create debug symbol packages with the same
+    component as the original package.
+
+ -- Niels Thykier <niels@thykier.net>  Sun, 20 Dec 2015 11:59:33 +0000
+
+debhelper (9.20151219) unstable; urgency=medium
+
+  * dh_installinit: Apply patch from Reiner Herrmann to sort
+    temporary files put in postinst.  (Closes: #806392)
+  * dh_installinit: Import change from Ubuntu to add /g
+    modifier when substituting the auto-script snippets.
+  * dh_*: Add /g when substituting the auto-script snippts in
+    other commands as well.
+  * dh_strip: Do not assume that ELF binaries have a Build-Id.
+    Thanks to Helmut Grohne for spotting this issue.
+    (Closes: #806814)
+  * dh_strip: Enable generation of dbgsym packages by default.
+    Thanks to Ansgar Burchardt and Paul Tagliamonte for
+    implementing the DAK side of this feature.
+    (Closes: #510772)
+
+ -- Niels Thykier <niels@thykier.net>  Sat, 19 Dec 2015 22:01:53 +0000
+
+debhelper (9.20151126) unstable; urgency=medium
+
+  * dh_compress: Apply patch from Michael Biebl to skip
+    compression of .devhelp2 files.  (Closes: #789153)
+  * dh_installinit: Undo "Disable initscripts when a package is
+    removed (but not yet purged)". (Reopens #749400,
+    Closes: #806276)
+
+ -- Niels Thykier <niels@thykier.net>  Thu, 26 Nov 2015 18:06:06 +0100
+
+debhelper (9.20151117) unstable; urgency=medium
+
+  [ Niels Thykier ]
+  * dh_clean: Temporarily interpret the absence of d/compat and
+    DH_COMPAT to mean compat 5.  This is to avoid breaking
+    packages that rely on cdbs to set debian/compat to 5 during
+    the build.  This temporary work around will live until
+    d/compat becomes mandatory.  (Closes: #805404)
+
+  [ Translations ]
+  * Update German translation (Chris Leick)
+    (Closes: #802198)
+
+ -- Niels Thykier <niels@thykier.net>  Tue, 17 Nov 2015 21:29:17 +0100
+
+debhelper (9.20151116) unstable; urgency=medium
+
+  [ Niels Thykier ]
+  * dh_strip: Sort build-ids to make the Build-Ids header
+    reproducible.
+  * Dh_Lib.pm: Respect --no-act in autotrigger, thanks to
+    Andreas Henriksson and Helmut Grohne for reporting
+    the issue.  (Closes: #800919)
+  * Fix typos in various manpages.  Thanks to Chris Leick
+    for reporting them.
+  * dh_clean: Avoid cleaning up debian/.debhelper when
+    passed the "-d" flag.
+  * Dh_Lib.pm: Reject compat levels earlier than 3.
+  * dh_clean: Support removal of directory (plus contents)
+    when they are marked with a trailing slash.
+    (Closes: #511048)
+  * dh_install,dh_installdocs,dh_installexamples: Apply
+    patches from Niko Tyni to make timestamp of directories
+    created from "find"-pipelines reproducible.
+    (Closes: #802005)
+  * dh_installinit: The postinst snippets are now only run
+    during "configure" or "abort-upgrade".
+    (Closes: #188028)
+  * cmake.pm: Apply patch from Jonathan Hall to fix an
+    accidental error hiding.  (Closes: #802984)
+  * qmake.pm: Apply patch from Sergio Durigan Junior to
+    create the build dir if it doesn't exist.
+    (Closes: #800738)
+  * dh_installinit: Disable initscripts when a package is
+    removed (but not yet purged).  (Closes: #749400)
+  * Dh_Lib.pm: Reject debian/compat files where the first
+    line is not entirely a positive number.
+
+  [ Translations ]
+  * Update German translation (Chris Leick)
+    (Closes: #802198)
+  * Update Portuguese translation (Américo Monteiro)
+    (Closes: #804631)
+  * Updated french translation (Baptiste Jammet)
+    (Closes: #805218)
+
+ -- Niels Thykier <niels@thykier.net>  Mon, 16 Nov 2015 21:05:53 +0100
+
+debhelper (9.20151005) unstable; urgency=medium
+
+  * dh_strip: Sort build-ids to make the Build-Ids header
+    reproducible.
+  * Dh_Lib.pm: Respect --no-act in autotrigger, thanks to
+    Andreas Henriksson and Helmut Grohne for reporting
+    the issue.  (Closes: #800919)
+
+ -- Niels Thykier <niels@thykier.net>  Mon, 05 Oct 2015 08:33:26 +0200
+
+debhelper (9.20151004) unstable; urgency=medium
+
+  [ Niels Thykier ]
+  * dh/dh_auto_*: Apply patch from Eduard Sanou to define
+    SOURCE_DATE_EPOCH.  (Closes: #791823)
+  * cmake.pm: Add better cross-compile support for cmake.
+    Heavily based on a patch from Helmut Grohne.
+    (Closes: #794396)
+  * cmake.pm: Pass -DCMAKE_INSTALL_SYSCONFDIR=/etc and
+    -DCMAKE_INSTALL_LOCALSTATEDIR=/var to cmake.  Thanks to
+    Felix Geyer, Lisandro Damián Nicanor Pérez Meyer and
+    Michael Terry for the assistance plus suggestions.
+    (Closes: #719148)
+  * dh_installinit: Quote directory name before using it in
+    a regex.
+  * dh_installinit: Create script snippts for tmpfiles.d
+    files even if the package has no sysvinit script or
+    explicit debian/<package>.service file.
+    (Closes: #795519)
+  * dh_makeshlibs: Revert passing -X to ldconfig in compat 10
+    after talking with the glibc maintainer.  This is not the
+    right place to make this change.
+  * d/control: Remove the homepage field.
+  * dh: Make dh_strip_nondeterminism optional, so debhelper
+    does not need to build-depend on it.
+  * dh_gencontrol/dh_builddeb: Temporarily stop building ddebs
+    for udebs as dpkg-gencontrol and dpkg-deb does not agree
+    the default file extension for these.
+  * dh_builddeb: Generate udebs with the correct filename even
+    when "-V" is passed to dpkg-gencontrol.  This relies on
+    dpkg-deb getting everything but the extension correct
+    (see #575059, #452273 for why it does not produce the
+     correct extesion).
+    (Closes: #516721, #677353, #672282)
+  * Dh_Lib.pm: Drop now unused "udeb_filename" subroutine.
+  * dh_strip.1: Correct the documentation about ddebs to
+    reflect the current implementation (rather than the
+    desired "state").  Thanks to Jakub Wilk for the report.
+    (Closes: #797002)
+  * dh_fixperms: Reset permissions to 0644 for .js, .css,
+    .jpeg, .jpg, .png, and .gif files.  Thanks to Ernesto
+    Hernández-Novich for the suggestion.  (Closes: #595097)
+  * dh_install: Read debian/not-installed if present as a
+    list of files that are deliberately not installed.
+    Files listed here will not cause dh_install to complain
+    with --list-missing.  Thanks to Peter Eisentraut for the
+    suggestion.  (Closes: #436240)
+  * Dh_Lib: Cherry-pick patch from Chris Lamb to only read
+    the latest changelog entry when determing the
+    SOURCE_DATE_EPOCH.
+  * debhelper.7: Provide a better example of how to insert
+    the debhelper maintainer script snippets into a maintainer
+    script written in Perl.  Thanks to Jakub Wilk for
+    reporting the issues.  (Closes: #797904)
+  * dh_shlibdeps: The "-L" option can now be passed multiple
+    times with different package names.  Thanks to Tristan
+    Schmelcher for the suggestion.  (Closes: #776103)
+  * dh,Buildsytems: In compat 10, default to --parallel.
+  * dh,Buildsytems: Accept "--no-parallel" to disable
+    parallel builds.  It is effectively the same as using
+    --max-parallel=1 but may be more intuitive to some people.
+  * dh_makeshlibs: Use a noawait trigger to invoke ldconfig
+    rather maintscripts.
+  * dh_installdirs.1: Add a note that many packages will work
+    fine without calling dh_installdirs.  (Closes: #748993)
+  * dh_compress: Apply patch from Rafael Kitover to support
+    passing files to dh_compress that would have been
+    compressed anyway.  (Closes: #794898)
+  * Dh_Lib: Apply patch from Gergely Nagy to make debhelper
+    export "DH_CONFIG_ACT_ON_PACKAGES" when executing an
+    executable debhelper config file.  This is intended to
+    assist dh-exec (etc.) in figuring what packages are
+    acted on.  (Closes: #698054)
+  * dh_movefiles: Expand globs in arguments passed in all
+    compat levels (and not just compat 1 and 2).
+    (Closes: #800332)
+  * dh_installinit: Clearly document that --onlyscripts
+    should generally be used with -p (or similar) to limit
+    the number of affected packages.  (Closes: #795193)
+
+  [ Paul Tagliamonte ]
+  * dh_gencontrol: Put debug debs back in the "debug" section.
+  * dh_strip/dh_gencontrol: Add a space separated list of
+    build-ids in the control file of packages containing
+    deattached debug symbols.
+
+  [ Andrew Ayer ]
+  * d/control: Depend on dh-strip-nondeterminism
+  * dh: Call dh_strip_nondeterminism during build.
+    (Closes: #759895)
+
+  [ Colin Watson ]
+  * Buildsystem.pm: Fix doit_in_sourcedir/doit_in_builddir to
+    always chdir back to the original directory even if the
+    subprocess exits non-zero.  (Closes: #798116)
+
+  [ Translations ]
+  * Update Portuguese translation (Américo Monteiro)
+    (Closes: #790820)
+
+ -- Niels Thykier <niels@thykier.net>  Sun, 04 Oct 2015 17:34:16 +0200
+
+debhelper (9.20150811) unstable; urgency=medium
+
+  * d/changelog: Add missing entry for dh_md5sums/#786695 in
+    the 9.20150628 release.
+  * Makefile: Set LC_ALL=C when sorting.
+  * dh: Avoid passing --parallel to other debhelper commands
+    if it is the only option and "parallel" is not set (or
+    set to 1) in DEB_BUILD_OPTIONS.
+  * dh_strip: Apply patch from Guillem Jover to fix a typo.
+    (Closes: #792207)
+  * dh_makeshlibs: Avoid an uninitialised warning in some
+    error cases.  Thanks to Jakub Wilk for reporting it.
+    (Closes: #793092)
+  * Dh_Lib.pm: Apply patch from Guillem Jover to use the
+    value of dpkg-architecture variables from the environment,
+    if present.  (Closes: #793440)
+  * Dh_Buildsystems.pm/Dh_Lib.pm: Import Exporter's import
+    subroutine rather than adding Exporter to @ISA.
+  * Dh_Lib.pm: Use Dpkg::Arch's debarch_is rather than running
+    dpkg-architecture to determine if an architecture matches
+    a wildcard.  Heavily based on a patch from Guillem Jover.
+    (Closes: #793443)
+  * dh_strip: Always compress debug sections of debug symbols
+    in ddebs.
+  * dh_strip: Strip ".comment" and ".note" sections from static
+    libraries.  Thanks to Helmut Grohne for the suggestion.
+    (Closes: #789351)
+  * dh_gencontrol: Stop explicitly passing -DSource to
+    dpkg-gencontrol when building ddebs.  The passed value was
+    wrong sometimes (e.g. with binNMUs) and dpkg-gencontrol
+    since 1.18.2~ computes the value correctly.
+  * d/control: Bump dependency on dpkg-dev to 1.18.2~ for
+    ddebs.  Build-depends not bumped since debhelper itself
+    does not produce any ddebs.
+  * dh_makeshlibs: Continue generating reports from
+    dpkg-gensymbols after the first error.  This helps
+    packages with multiple libraries to spot all the symbol
+    issues in one build.
+
+ -- Niels Thykier <niels@thykier.net>  Tue, 11 Aug 2015 22:47:08 +0200
+
+debhelper (9.20150628) unstable; urgency=medium
+
+  * Upload to unstable with ddebs support disabled by default.
+
+  [ Niels Thykier ]
+  * Buildsystem.pm: Apply patch from Emmanuel Bourg to
+    provide doit_in_{build,source}dir_noerror methods.
+    (Closes: #785811)
+  * Dh_Lib.pm: Promote error_exitcode to a regular exported
+    subroutine (from an internal one).
+  * dh_compress: Apply patch from Osamu Aoki to avoid compressing
+    ".xhtml" files and to use a POSIX compliant find expression.
+    (Closes: #740405)
+  * dh_makeshlibs: Fix typo in manpage.  Thanks to Jakub Wilk for
+    reporting it.  (Closes: #788473)
+  * dh_auto_test: Run tests by default even during cross-building.
+    (Closes: #726967)
+  * dh_gencontrol: Put ddebs in the "debugsym" section.
+  * dh_strip: Support a new --[no-]ddebs option intended for
+    packages to disable automatic ddebs.
+  * dh_strip: Do not create ddebs for "-dbg" packages.
+  * dh_builddeb/dh_gencontrol: Let dpkg figure out the name
+    of the ddebs itself now that ddebs uses a ".deb"
+    extension.
+  * dh_md5sums: create DEBIAN dir in ddebs before using it.
+    (Closes: #786695)
+
+  [ Thibaut Paumard ]
+  * Bug fix: "dh_usrlocal leaves directories behind", thanks to Andreas
+    Beckmann (Closes: #788098).
+
+ -- Niels Thykier <niels@thykier.net>  Sun, 28 Jun 2015 13:51:48 +0200
+
+debhelper (9.20150519+ddebs) experimental; urgency=medium
+
+  * dh_strip: Add --ddeb-migration option to support migration
+    from a --dbg-package to a automatic ddeb.
+  * Dh_Lib.pm: Add "package_multiarch" function.
+  * d/control: Add versioned Build-Depends on dpkg-dev to support
+    creating ddebs with the ".deb" extension.
+  * Dh_lib.pm: Generate ddebs with the ".deb" extension.
+  * dh_gencontrol: Reduce the "pkg:arch" to "pkg" as APT and dpkg
+    disagree on what satisfies an "pkg:arch" dependency.
+  * dh_strip.1: Document what inhibits ddeb generation.
+  * dh_gencontrol: Only mark a ddeb as Multi-Arch: same if the
+    original deb was Multi-Arch: same.  All other ddebs are now
+    Multi-Arch: no (by omitting the field).
+  * dh_strip: Avoid generating a ddeb if the same name as an
+    explicitly declared package.  Apparently, Ubuntu has been
+    creating some of these manually.
+
+ -- Niels Thykier <niels@thykier.net>  Tue, 19 May 2015 21:56:55 +0200
+
+debhelper (9.20150507) unstable; urgency=medium
+
+  [ Niels Thykier ]
+  * dh_bugfiles: Fix regression in installing the reportbug
+    script correctly.  Thanks to Jakub Wilk for reporting.
+    (Closes: #784648)
+
+  [ Translation updates ]
+  * pt - Thanks to Américo Monteiro.
+    (Closes: #784582)
+
+ -- Niels Thykier <niels@thykier.net>  Thu, 07 May 2015 20:07:49 +0200
+
+debhelper (9.20150502+ddebs) experimental; urgency=medium
+
+  * Add /experimental/ ddebs support *if* the environment
+    variable DH_BUILD_DDEBS is set to 1.
+
+ -- Niels Thykier <niels@thykier.net>  Sat, 02 May 2015 10:35:29 +0200
+
+debhelper (9.20150502) unstable; urgency=medium
+
+  * dh_compress: REVERT change to avoid compressing ".xhtml"
+    files due to #784016.  (Reopens: #740405, Closes: #784016)
+
+ -- Niels Thykier <niels@thykier.net>  Sat, 02 May 2015 10:21:42 +0200
+
+debhelper (9.20150501) unstable; urgency=medium
+
+  [ Niels Thykier ]
+  * dh_strip: Recognise .node as potential ELF binaries that
+    should be stripped like a regular shared library.  Thanks
+    to Paul Tagliamonte for the report.  (Closes: #668852)
+  * dh_shlibdeps: Recognise .node as potential ELF binaries that
+    should be processed like a regular shared library.  Thanks
+    to Paul Tagliamonte for the report.  (Closes: #668851)
+  * Convert package to the 3.0 (native) format, so dpkg-source
+    strips the .git directory by default during build.
+  * Reorder two paragraphs in d/copyright to avoid one of them
+    being completely overwritten by the other.
+  * d/control: Use the canonical URLs for the Vcs-* fields.
+  * dh_makeshlibs: Apply patch from Jérémy Bobbio to ensure
+    stable ordering of generated shlibs files.
+    (Closes: #774100)
+  * dh_icons: Apply patch from Jérémy Bobbio to ensure stable
+    ordering of the icon list inserted into generated maintainer
+    scripts.  (Closes: #774102)
+  * Dh_lib: Add a public "make_symlink" subroutine allowing
+    dh_*-like tools to generate policy compliant symlinks without
+    invoking dh_link.  (Closes: #610173)
+  * dh_compress: Apply patch from Osamu Aoki to avoid compressing
+    ".xhtml" files.  (Closes: #740405)
+  * dh_gconf: Apply patch from Josselin Mouette to avoid
+    dependency on gconf2 for installs of non-schema files.
+    (Closes: #592958)
+  * dh_fixperms: Correct permissions of reportbug files and scripts.
+    Thanks to Fabian Greffrath for the report and a basic patch.
+    (Closes: #459548)
+  * The "ant" build system now loads debian/ant.properties
+    automatically before build and clean (like CDBS).  Thanks to
+    Thomas Koch for the report.  (Closes: #563909)
+  * Dh_lib: Add install_dh_config_file to install a file either by
+    copying the source file or (with an executable file under compat
+    9) execute the file and use its output to generate the
+    destination.
+  * dh_lintian: Under compat 9, the debian/lintian-overrides are now
+    executed if they have the exec-bit set like the debian/install
+    files.  Thanks to Axel Beckert for the report.  (Closes: #698500)
+  * d/rules: Remove makefile target only intended for/used by the
+    previous maintainer.
+  * dh_makeshlibs: In compat 10+, pass "-X" to ldconfig to
+    only  regenerate the cache (instead of also creating missing
+    symlinks).  Thanks to Joss Mouette for the suggestion.
+    (Closes: #549990)
+  * autoscripts/post{inst,rm}-makeshlibs-c10: New files.
+  * dh_strip: Pass the --enable-deterministic-archives option to strip
+    when it is stripping static libraries.  This avoids some
+    unnecessary non-determinism in builds.  Based on patch by
+    Andrew Ayer.
+  * dh_install, dh_installdocs, dh_installexamples and dh_installinfo:
+    Pass --reflink=auto to cp.  On supported filesystems, this provides
+    faster copying.
+  * Make perl tests verbose.  Thanks to gregor herrmann for the patch.
+    (Closes: #714546)
+  * Dh_Lib.pm: Apply patch from Martin Koeppe to provide
+    install_{dir,file,prog,lib} subroutines for installing directories,
+    regular files, scripts/executables and libraries (respectively).
+  * Migrate many "ad-hoc" calls to "install" to the new "install_X"
+    subroutines from Dh_Lib.pm.  Based on patch from Martin Koeppe.
+    (Closes: #438930)
+  * dh_gconf: Apply patch from Martin Koeppe to avoid adding a layer
+    of shell-escaping to a printed command line when the command was
+    in fact run without said layer of shell-escaping.
+  * dh_installdocs: Use ${binary:Version} for generating dependencies
+    with "--link-doc" instead of trying to determine the correct
+    package version.  Thanks to Stephen Kitt for reporting this
+    issue.  (Closes: #747141)
+  * dh_installdocs.1: Document that --link-doc may in some cases
+    require a dir to symlink (or symlink to dir) migration.
+    (Closes: #659044)
+  * dh_usrlocal: Apply patch from Jérémy Bobbio to generate
+    deterministic output.  (Closes: #775020)
+  * dh_makeshlibs: In compat 10, install the maintainer-provided shlibs
+    file (replacing the generated one).  (Closes: #676168)
+  * dh_installdeb: In compat 10, stop installing the maintainer-provided
+    shlibs file as it is now done by dh_makeshlibs instead.
+  * dh_installdocs: Remove remark about dh_installdocs not being
+    idempotent as it no longer adds anything to maintainer scripts.
+  * autoscripts/*-emacsen: Apply patch from Paul Wise to check that
+    emacs-package-{install,remove} is (still) present before invoking
+    it.  (Closes: #736896)
+  * dh_install.1: Document that dh-exec can be used to do renaming
+    and provide a trivial example of how to achieve it.  (Closes: #245554)
+  * dh_makeshlibs: Apply patch from Guillem Jover to stop adding
+    Pre-Depends on multiarch-support.  The transition is far enough that
+    we do not need it any longer.  (Closes: #783898)
+  * dh_gencontrol: Insert an empty misc:Pre-Depends to avoid warnings
+    in packages for using a (now often) non-existing substvars.
+  * d/control: Remove versioned conflicts that are no longer relevant.
+
+  [ Bernhard R. Link ]
+  * Dh_lib: apply patch from Guillem Jover to support case-insensitive
+    control field names. (Closes: #772129)
+  * add DH_QUIET environment variable to make things more silent
+  * dh: don't output commands to run if DH_QUIET is set
+  * buildsystems print commands unless DH_QUIET is set
+    (Closes: #639168, #680687)
+  * autoconf is always passed one of
+     --enable-silent-rules (if DH_QUIET is set) or
+     --disable-silent-rules (otherwise). (Closes: #551463, #680686)
+  * dh_compress: exclude .xz .lzma and .lz files from compression
+    (Closes: #778927)
+  * dh_installwm: call by dh after dh_link (Closes: #781077),
+    error out in compat 10 if no man page found
+
+  [ Jason Pleau ]
+  * dh_installchangelogs: Add CHANGES.md to the list of common changelog
+    filenames (Closes: #779471)
+
+  [ Axel Beckert ]
+  * dh_installchangelogs: Consistent suffix search order (none, ".txt",
+    ".md") for all upstream changelog file names ("changelog", "changes",
+    "history").
+      + Looks for "history.md" now, too.
+      + Makes it easier to add base names or suffixes in the future.
+  * dh_installchangelogs: Also look for changelogs with .rst suffix.
+
+  [ Tianon Gravi ]
+  * debhelper.pod: Clarify "ENVIRONMENT" requirements for Makefile syntax.
+    (Closes: #780133)
+
+  [ Translation updates ]
+  * pt - Thanks to Américo Monteiro.
+    (Closes: #758575)
+
+ -- Niels Thykier <niels@thykier.net>  Fri, 01 May 2015 14:53:16 +0200
+
 debhelper (9.20150101) unstable; urgency=medium
 
   [ Niels Thykier ]

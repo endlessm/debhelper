@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 =head1 NAME
 
@@ -7,6 +7,7 @@ dh_installxfonts - register X fonts
 =cut
 
 use strict;
+use warnings;
 use Debian::Debhelper::Dh_Lib;
 
 =head1 SYNOPSIS
@@ -78,9 +79,9 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 		}
 
 		autoscript($package, "postinst", "postinst-xfonts",
-			"s:#CMDS#:".join(";", @cmds, @cmds_postinst).":");
+			"s:#CMDS#:".join(";", @cmds, @cmds_postinst).":g");
 		autoscript($package, "postrm", "postrm-xfonts",
-			"s:#CMDS#:".join(";", @cmds, @cmds_postrm).":");
+			"s:#CMDS#:".join(";", @cmds, @cmds_postrm).":g");
 
 		addsubstvar($package, "misc:Depends", "xfonts-utils");
 	}
@@ -97,3 +98,9 @@ This program is a part of debhelper.
 Joey Hess <joeyh@debian.org>
 
 =cut
+
+# Local Variables:
+# indent-tabs-mode: t
+# tab-width: 4
+# cperl-indent-level: 4
+# End:

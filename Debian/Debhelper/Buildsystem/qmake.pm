@@ -9,7 +9,7 @@ package Debian::Debhelper::Buildsystem::qmake;
 use strict;
 use warnings;
 use Debian::Debhelper::Dh_Lib qw(error get_buildprefix);
-use base 'Debian::Debhelper::Buildsystem::makefile';
+use parent qw(Debian::Debhelper::Buildsystem::makefile);
 
 our $qmake="qmake";
 
@@ -68,6 +68,7 @@ sub configure {
 	push @flags, "QMAKE_STRIP=:";
 	push @flags, "PREFIX=" . get_buildprefix();
 
+	$this->mkdir_builddir();
 	$this->doit_in_builddir($qmake, @options, @flags, @_);
 }
 
@@ -81,3 +82,9 @@ sub install {
 }
 
 1
+
+# Local Variables:
+# indent-tabs-mode: t
+# tab-width: 4
+# cperl-indent-level: 4
+# End:

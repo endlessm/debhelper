@@ -11,7 +11,7 @@ use warnings;
 use Debian::Debhelper::Dh_Lib;
 use File::Spec;
 
-use base 'Exporter';
+use Exporter qw(import);
 our @EXPORT=qw(&buildsystems_init &buildsystems_do &load_buildsystem &load_all_buildsystems);
 
 use constant BUILD_STEPS => qw(configure build test install clean);
@@ -139,7 +139,8 @@ sub load_all_buildsystems {
 sub buildsystems_init {
 	my %args=@_;
 
-	my $max_parallel=1;
+	# Compat 10 defaults to --parallel by default
+	my $max_parallel = compat(9) ? 1 : -1;
 
 	# Available command line options
 	my %options = (
@@ -156,6 +157,7 @@ sub buildsystems_init {
 	    "list" => \$opt_list,
 
 	    "parallel" => sub { $max_parallel = -1 },
+	    'no-parallel' => sub { $max_parallel = 1 },
 	    "max-parallel=i" => \$max_parallel,
 	);
 	$args{options}{$_} = $options{$_} foreach keys(%options);
@@ -226,3 +228,9 @@ sub buildsystems_do {
 }
 
 1
+
+# Local Variables:
+# indent-tabs-mode: t
+# tab-width: 4
+# cperl-indent-level: 4
+# End:
