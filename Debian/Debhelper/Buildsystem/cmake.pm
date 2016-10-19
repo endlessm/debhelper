@@ -73,13 +73,15 @@ sub configure {
 		if ($ENV{CC}) {
 			push @flags, "-DCMAKE_C_COMPILER=" . $ENV{CC};
 		} else {
-			push @flags, "-DCMAKE_C_COMPILER=" . dpkg_architecture_value("DEB_HOST_GNU_TYPE") . "-cc";
+			push @flags, "-DCMAKE_C_COMPILER=" . dpkg_architecture_value("DEB_HOST_GNU_TYPE") . "-gcc";
 		}
 		if ($ENV{CXX}) {
 			push @flags, "-DCMAKE_CXX_COMPILER=" . $ENV{CXX};
 		} else {
-			push @flags, "-DCMAKE_CXX_COMPILER=" . dpkg_architecture_value("DEB_HOST_GNU_TYPE") . "-c++";
+			push @flags, "-DCMAKE_CXX_COMPILER=" . dpkg_architecture_value("DEB_HOST_GNU_TYPE") . "-g++";
 		}
+		push(@flags, "-DPKG_CONFIG_EXECUTABLE=/usr/bin/" . dpkg_architecture_value("DEB_HOST_GNU_TYPE") . "-pkg-config");
+		push(@flags, "-DCMAKE_INSTALL_LIBDIR=lib/" . dpkg_architecture_value("DEB_HOST_MULTIARCH"));
 	}
 
 	# CMake doesn't respect CPPFLAGS, see #653916.
@@ -95,6 +97,12 @@ sub configure {
 	if (my $err = $@) {
 		if (-e $this->get_buildpath("CMakeCache.txt")) {
 			$this->doit_in_builddir("tail -v -n +0 CMakeCache.txt");
+		}
+		if (-e $this->get_buildpath('CMakeFiles/CMakeOutput.log')) {
+			$this->doit_in_builddir('tail -v -n +0 CMakeFiles/CMakeOutput.log');
+		}
+		if (-e $this->get_buildpath('CMakeFiles/CMakeError.log')) {
+			$this->doit_in_builddir('tail -v -n +0 CMakeFiles/CMakeError.log');
 		}
 		die $err;
 	}
