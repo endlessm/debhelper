@@ -130,8 +130,7 @@ after a particular debhelper command is run.
 		chmod 4755 debian/foo/usr/bin/foo
 
 Python tools are not run by dh by default, due to the continual change
-in that area. (Before compatibility level v9, dh does run B<dh_pysupport>.)
-Here is how to use B<dh_python2>.
+in that area. Here is how to use B<dh_python2>.
 
 	#!/usr/bin/make -f
 	%:
@@ -283,11 +282,6 @@ matches, the last one in the sequence will be used.
 # Stash this away before init modifies it.
 my @ARGV_orig=@ARGV;
 
-if (compat(8, 1)) {
-	# python-support was enabled by default before v9.
-	# (and comes first so python-central loads later and can disable it).
-	unshift @ARGV, "--with=python-support";
-}
 if (not compat(9, 1)) {
 	# Enable autoreconf'ing by default in compat 10 or later.  Use the
 	# sequence add-on so existing --without=autoreconf
@@ -295,6 +289,10 @@ if (not compat(9, 1)) {
 	# Enable systemd support by default in compat 10 or later.
 	unshift(@ARGV, "--with=systemd");
 }
+if (compat(10, 1)) {
+	unshift(@ARGV, "--with=build-stamp");
+}
+
 
 inhibit_log();
 		
@@ -375,9 +373,7 @@ my @bd = (qw{
 	dh_auto_configure
 	dh_auto_build
 	dh_auto_test
-},
-	"create-stamp ${build_stamp_file}",
-);
+});
 my @i = (qw{
 	dh_testroot
 	dh_prep
@@ -419,6 +415,7 @@ my @i = (qw{
 	dh_strip_nondeterminism
 	dh_compress
 	dh_fixperms
+	dh_missing
 });
 my @ba=qw{
 	dh_strip
@@ -466,9 +463,7 @@ my %command_opts;
 
 # sequence addon interface
 sub _insert {
-	my $offset=shift;
-	my $existing=shift;
-	my $new=shift;
+	my ($offset, $existing, $new) = @_;
 	foreach my $sequence (keys %sequences) {
 		my @list=@{$sequences{$sequence}};
 		next unless grep $existing, @list;
@@ -493,27 +488,30 @@ sub insert_after {
 	_insert(1, @_);
 }
 sub remove_command {
-	my $command=shift;
+	my ($command) = @_;
 	foreach my $sequence (keys %sequences) {
 		$sequences{$sequence}=[grep { $_ ne $command } @{$sequences{$sequence}}];
 	}
 	
 }
 sub add_command {
-	my $command=shift;
-	my $sequence=shift;
+	my ($command, $sequence) = @_;
 	unshift @{$sequences{$sequence}}, $command;
+}
+sub add_command_at_end {
+	my ($command, $sequence) = @_;
+	push(@{$sequences{$sequence}}, $command);
 }
 sub add_command_options {
 	my $command=shift;
 	push @{$command_opts{$command}}, @_;
 }
 sub remove_command_options {
-	my $command=shift;
-	if (@_) {
+	my ($command, @cmd_options) = @_;
+	if (@cmd_options) {
 		# Remove only specified options
 		if (my $opts = $command_opts{$command}) {
-			foreach my $opt (@_) {
+			foreach my $opt (@cmd_options) {
 				$opts = [ grep { $_ ne $opt } @$opts ];
 			}
 			$command_opts{$command} = $opts;
@@ -643,12 +641,23 @@ if ( -f $build_stamp_file) {
 	close($fd);
 }
 
+# Lazy cache of the result of optimize_sequence on the "build"
+# sequence
+my $optimized_build_seq;
 foreach my $package (@packages) {
 	my @log;
 	if (compat(9)) {
 		@log = load_log($package, \%logged);
 	} elsif (exists($stamp_file{$package})) {
-		@log = @bd;
+		if (not defined($optimized_build_seq)) {
+			# Expand "build" so we can accurately filter out
+			# everything (admittedly, it is bit of an over
+			# approximation)
+			# Related bug: #851071
+			my @seq = optimize_sequence(@{$sequences{'build'}});
+			$optimized_build_seq = \@seq;
+		}
+		@log = @{$optimized_build_seq};
 		# We do not need %logged in compat 10
 	}
 	if ($dh{AFTER}) {
@@ -721,6 +730,8 @@ foreach my $i (0..$stoppoint) {
 	}
 	if (my $stamp_file = stamp_target($command)) {
 		my %seen;
+		print "   create-stamp ".escape_shell($stamp_file)."\n";
+
 		next if $dh{NO_ACT};
 		open(my $fd, '+>>', $stamp_file) or error("open($stamp_file, rw) failed: $!");
 		# Seek to the beginning
@@ -774,8 +785,7 @@ foreach my $i (0..$stoppoint) {
 }
 
 sub run {
-	my $command=shift;
-	my @options=@_;
+	my ($command, @options) = @_;
 
 	# Include additional command options if any
 	unshift @options, @{$command_opts{$command}}
@@ -801,10 +811,7 @@ sub run {
 # Tries to run an override target for a command. Returns the list of
 # packages that it was unable to run an override target for.
 sub run_override {
-	my $override_type=shift; # arch, indep, or undef
-	my $command=shift;
-	my @packages=@{shift()};
-	my @options=@_;
+	my ($override_type, $command, $packages, @options) = @_;
 
 	my $override="override_$command".
 		(defined $override_type ? "-".$override_type : "");
@@ -812,25 +819,27 @@ sub run_override {
 	# Check which packages are of the right architecture for the
 	# override_type.
 	my (@todo, @rest);
+	my $has_explicit_target = rules_explicit_target($override);
+
 	if (defined $override_type) {
-		foreach my $package (@packages) {
-			my $isall=package_arch($package) eq 'all';
-			if (($override_type eq 'indep' && $isall) ||
-			    ($override_type eq 'arch' && !$isall)) {
-				push @todo, $package;
-			}
-			else {
-				push @rest, $package;
-				push @options, "-N$package";
+		if ($has_explicit_target) {
+			foreach my $package (@{$packages}) {
+				my $isall=package_arch($package) eq 'all';
+				if (($override_type eq 'indep' && $isall) ||
+					($override_type eq 'arch' && !$isall)) {
+					push @todo, $package;
+				} else {
+					push @rest, $package;
+					push @options, "-N$package";
+				}
 			}
 		}
 	}
 	else {
-		@todo=@packages;
+		@todo=@{$packages};
 	}
 
-	my $has_explicit_target = rules_explicit_target($override);
-	return @packages unless defined $has_explicit_target; # no such override
+	return @{$packages} unless defined $has_explicit_target; # no such override
 	return @rest if ! $has_explicit_target; # has empty override
 	return @rest unless @todo; # has override, but no packages to act on
 
@@ -861,12 +870,17 @@ sub run_override {
 		commit_override_log(@todo);
 	}
 
+	# Override targets may introduce new helper files.  Strictly
+	# speaking this *shouldn't* be necessary, but lets make no
+	# assumptions.
+	Debian::Debhelper::Dh_Lib::dh_clear_unsafe_cache();
+
 	return @rest;
 }
 
 sub optimize_sequence {
-	my @sequence;
-	my %seen;
+	my (@commands) = @_;
+	my (@sequence, %seen);
 	my $add=sub {
 		# commands can appear multiple times when sequences are
 		# inlined together; only the first should be needed
@@ -876,7 +890,7 @@ sub optimize_sequence {
 			push @sequence, $command;
 		}
 	};
-	foreach my $command (@_) {
+	foreach my $command (@commands) {
 		my $rules_target=rules_target($command);
 		if (defined $rules_target &&
 		    ! defined rules_explicit_target($rules_target)) {
@@ -891,7 +905,7 @@ sub optimize_sequence {
 }
 
 sub rules_target {
-	my $command=shift;
+	my ($command) = @_;
 	if ($command =~ /^debian\/rules\s+(.*)/) {
 		return $1
 	}
@@ -921,7 +935,7 @@ sub rules_explicit_target {
 	# in debian/rules.
 	# undef is returned if target does not exist, 0 if target is noop
 	# and 1 if target has dependencies or executes commands.
-	my $target=shift;
+	my ($target) = @_;
 
 	if (! $rules_parsed) {
 		my $processing_targets = 0;
@@ -987,8 +1001,7 @@ sub warn_deprecated {
 }
 
 sub command_pos {
-	my $command=shift;
-	my @sequence=@_;
+	my ($command, @sequence) = @_;
 
 	foreach my $i (0..$#sequence) {
 		if ($command eq $sequence[$i]) {
@@ -1012,8 +1025,7 @@ sub command_pos {
 
 my %skipinfo;
 sub can_skip {
-	my $command=shift;
-	my @packages=@_;
+	my ($command, @packages) = @_;
 
 	return 0 if $user_specified_options ||
 		(exists $ENV{DH_OPTIONS} && length $ENV{DH_OPTIONS});
@@ -1024,29 +1036,29 @@ sub can_skip {
 	my @skipinfo=@{$skipinfo{$command}};
 	return 0 unless @skipinfo;
 
-	foreach my $package (@packages) {
-		foreach my $skipinfo (@skipinfo) {
-			if ($skipinfo=~/^([a-zA-Z0-9-_]+)\((.*)\)$/) {
-				my $type = $1;
-				my $need = $2;
-				if ($type eq 'tmp') {
+	foreach my $skipinfo (@skipinfo) {
+		if ($skipinfo=~/^([a-zA-Z0-9-_]+)\((.*)\)$/) {
+			my $type = $1;
+			my $need = $2;
+			if ($type eq 'tmp') {
+				foreach my $package (@packages) {
 					my $tmp = tmpdir($package);
 					return 0 if -e "$tmp/$need";
-				} else {
-					# Unknown hint - make no assumptions
-					return 0;
 				}
-			}
-			elsif (pkgfile($package, $skipinfo) ne '') {
+			} else {
+				# Unknown hint - make no assumptions
 				return 0;
 			}
+		} else {
+			# Use the secret bulk check call
+			return 0 if pkgfile(\@packages, $skipinfo) ne '';
 		}
 	}
 	return 1;
 }
 
 sub extract_skipinfo {
-	my $command=shift;
+	my ($command) = @_;
 
 	foreach my $dir (split (':', $ENV{PATH})) {
 		if (open (my $h, "<", "$dir/$command")) {
