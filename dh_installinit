@@ -25,6 +25,12 @@ It also automatically generates the F<postinst> and F<postrm> and F<prerm>
 commands needed to set up the symlinks in F</etc/rc*.d/> to start and stop
 the init scripts.
 
+In compat 10 or earlier: If a package only ships a systemd service
+file and no sysvinit script is provided, you may want to exclude the
+call to dh_installinit for that package (e.g. via B<-N>).  Otherwise,
+you may get warnings from lintian about init.d scripts not being
+included in the package.
+
 =head1 FILES
 
 =over 4
@@ -47,13 +53,13 @@ build directory.
 =item debian/I<package>.service
 
 If this exists, it is installed into lib/systemd/system/I<package>.service in
-the package build directory.
+the package build directory. Only used in compat levels 10 and below.
 
 =item debian/I<package>.tmpfile
 
 If this exists, it is installed into usr/lib/tmpfiles.d/I<package>.conf in the
 package build directory. (The tmpfiles.d mechanism is currently only used
-by systemd.)
+by systemd.) Only used in compat levels 10 and below.
 
 =back
 
@@ -103,7 +109,18 @@ script.
 
 =item B<-r>, B<--no-stop-on-upgrade>, B<--no-restart-on-upgrade>
 
-Do not stop init script on upgrade.
+Do not stop init script on upgrade.  This has the side-effect of not
+restarting the service as a part of the upgrade.
+
+If you want to restart the service with minimal downtime, please use
+B<--restart-after-upgrade> (default in compat 10 or later).  If you want
+the service to be restarted but be stopped during the upgrade, then please
+use B<--no-restart-after-upgrade> (note the "after-upgrade").
+
+Note that the B<--no-restart-on-upgrade> alias is deprecated and will
+be removed in compat 11.  This is to avoid confusion with the
+B<--no-restart-after-upgrade> option.  The B<--no-stop-on-upgrade>
+variant was introduced in debhelper 10.2 (included in Debian stretch).
 
 =item B<--no-start>
 
@@ -169,7 +186,11 @@ $dh{RESTART_AFTER_UPGRADE} = 1 if not compat(9);
 init(options => {
 	"r" => \$dh{R_FLAG},
 	'no-stop-on-upgrade' => \$dh{R_FLAG},
-	"no-restart-on-upgrade" => \$dh{R_FLAG},
+	"no-restart-on-upgrade" => sub {
+		$dh{R_FLAG} = 1;
+		deprecated_functionality("--no-restart-on-upgrade has been renamed to --no-stop-on-upgrade",
+								 11);
+	},
 	"no-start" => \$dh{NO_START},
 	"R|restart-after-upgrade!" => \$dh{RESTART_AFTER_UPGRADE},
 	"init-script=s" => \$dh{INIT_SCRIPT},
@@ -217,14 +238,16 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 		}
 	}       
 
-	my $service=pkgfile($package,"service");
+	my $service='';
+	$service=pkgfile($package,"service") if compat(10);
 	if ($service ne '' && ! $dh{ONLYSCRIPTS}) {
 		my $path="$tmp/lib/systemd/system";
 		install_dir($path);
 		install_file($service, "$path/$script.service");
 	}
 
-	my $tmpfile=pkgfile($package,"tmpfile");
+	my $tmpfile='';
+	$tmpfile=pkgfile($package,"tmpfile") if compat(10);
 	if ($tmpfile ne '' && ! $dh{ONLYSCRIPTS}) {
 		my $path="$tmp/usr/lib/tmpfiles.d";
 		install_dir($path);
@@ -255,7 +278,7 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 		error("Can't use --init-script with an upstart job");
 	}
 
-	if (!$dh{NOSCRIPTS}) {
+	if (compat(10) && !$dh{NOSCRIPTS}) {
 		# Include postinst-init-tmpfiles if the package ships any files
 		# in /usr/lib/tmpfiles.d or /etc/tmpfiles.d
 		my @tmpfiles;
