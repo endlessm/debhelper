@@ -1,3 +1,25 @@
+debhelper (10.4) experimental; urgency=medium
+
+  * Team upload.
+
+  [ Niels Thykier ]
+  * meson.pm: Pass --wrap-mode=nodownload to meson (requires meson
+    0.40-1 or later).
+  * dh_install: Fix initialized warning when --sourcedir is absent
+    on the cmd-line.
+  * dh_missing: Accept --sourcedir (given it is passed by dh_install).
+    (Closes: #862049)
+  * Dh_Lib.pm: Fix a bug in pkgfile that caused dh to skip helpers
+    that had configuration files.  Thanks to Michael Biebl for finding
+    and reporting.  (Closes: #863387)
+
+  [ Chris Lamb ]
+  * dh_fixperms: Fix regression where dh_fixperms would fail to correct
+    permissions because it used an invalid find expression.
+    (Closes: #862003)
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 26 May 2017 22:08:37 +0200
+
 debhelper (10.3) experimental; urgency=medium
 
   [ Helmut Grohne ]
