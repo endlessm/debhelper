@@ -1,3 +1,84 @@
+debhelper (10.5) unstable; urgency=medium
+
+  * Upload to unstable.  (Closes: #865363)
+
+  [ Niels Thykier ]
+  * dh_installman: Remove unncessary "chown" call that made things a
+    lot slower.  Thanks to Kurt Roeckx for reporting it.
+  * dh_installman: Fix wrong permission of man pages (set 0755 instead
+    of 0644).  Regression introduced in 10.2.2.
+  * dh_installman: Batch chmod calls to reduce the overhead for
+    packages with many manpages.
+  * dh: Undo an unsafe optimisation that caused "-indep" and "-arch"
+    override targets to be ignored.  Thanks to Gianfranco Costamagna
+    for reporting it and Iain Lane for tracing it to the commit
+    that introduced the issue.  (Closes: #863887)
+  * dh_clean, dh_prep: Bulk delete most files and directories, which
+    gives a noticeable speed up for source packages building many
+    binary packages.
+  * dh_shlibdeps: Avoid creating debian/<pkg>/DEBIAN directory if it
+    is not needed.
+  * Dh_Lib.pm: Fix typo in error message.
+  * Dh_Lib.pm: Rewrite install_* to use File::Copy to avoid the
+    overhead of a fork+exec per file.  For simplicity, the verbose
+    output still claim debhelper uses "install -p -m <mode>" for this.
+  * Dh_Lib.pm: Replace most of the fork+exec calls to mv for simple
+    file renames.
+  * Dh_Lib.pm: Add sub to make common dh_* tools do their thing in
+    parallel with very little coding effort.  This parallel support
+    accounts for DEB_BUILD_OPTIONS to set the upper limit.
+  * dh_fixperms: Run package updates in parallel if DEB_BUILD_OPTIONS
+    permits it.
+  * dh_installchangelogs: Ditto.
+  * dh_compress: Ditto.
+  * dh_installman: Ditto.
+  * dh_genchanges: Ditto.
+  * dh_shlibdeps: Ditto.
+  * dh_md5sums: Ditto.
+  * dh_builddeb: Rewrite the hand-written parallel code to use the new
+    simpler way of doing it.
+  * dh_shlibdeps: Avoid calling file(1) on debug symbols.
+  * SUPPORT-POLICY: Include new document that describes the current
+    support policy of debhelper compat levels.
+  * Dh_Lib.pm: Pass ":unix" layer when using the ":gzip" layer due to
+    PerlIO-gzip bug RT#114557.
+  * Dh_Lib.pm: Ignore empty dpkg-architecture variables.
+    (Closes: #862844)
+  * dh_installchangelogs: Avoid trying to install a directory by default
+    as a changelog file.  Thanks to Markus Koschany for reporting the
+    issue.  (Closes: #861852)
+  * dh_installwm.1: Correct documentation to reflect the behaviour in
+    compat 10.  Thanks to Robert Luberda for reporting the issue.
+    (Closes: #865708)
+  * dh_installcatalogs: Use explicit await triggers to avoid trigger
+    a lintian warning.
+  * dh_installman: In compat 11, attempt to detect the language of the
+    manpage based on the directory (/man/<LANG>/manX/) before using the
+    extension.  This is more reliably for packages using dh_installman
+    to install manpages from the temporary install dir.
+    (Closes: #761024)
+  * dh_installcatalogs: Check the return code of close when generating
+    a catalog for sgml-base.
+  * Dh_Lib.pm: Emulate "install -d" with File::Path to avoid a fork+exec
+    for creating directories.  For simplicity, the verbose output still
+    claim debhelper uses "install -d" for this.
+  * dh_auto_install: In compat 11, do noot create package build
+    directories (except if one of them happens to be the default
+    "destdir" for dh_auto_install).
+
+  [ Iain Lane ]
+  * Dh_Lib: Re-add warning + exit 0 for the -i/-a shortcut that was
+    added in 10.3.  (Closes: #863961)
+  * dh_install: Pass --exclude/-X to dh_missing. (Closes: #863447)
+
+  [ Michael Stapelberg ]
+  * Dh_Getopt: Provide a more detailed error message when there are
+    no buildable packages caused by architecture restrictions.
+    (Closes: #858467)
+  * Dh_Lib: Split package_arch($package) into three distinct functions.
+
+ -- Niels Thykier <niels@thykier.net>  Sun, 25 Jun 2017 17:00:00 +0000
+
 debhelper (10.4) experimental; urgency=medium
 
   * Team upload.
@@ -5716,7 +5797,7 @@ debhelper (3.0.0) unstable; urgency=low
 
   * Added dh_installman, a new program that replaces dh_installmanpages.
     It is not DWIM. You tell it what to install and it figures out where 
-    based on .TH section field and filename extention. I reccommend everyone
+    based on .TH section field and filename extension. I reccommend everyone
     begin using it, since this is much better then dh_installmanpages's
     evilness. I've been meaning to do this for a very long time..
     Closes: #38673, #53964, #64297, #16933, #17061, #54059, #54373, #61816
@@ -5787,7 +5868,7 @@ debhelper (2.2.18) unstable; urgency=medium
 
 debhelper (2.2.17) unstable; urgency=medium
 
-  * dh_installdebconf: marge in templates with a .ll_LL extention,
+  * dh_installdebconf: marge in templates with a .ll_LL extension,
     they were previously ignored.
 
  -- Joey Hess <joeyh@debian.org>  Mon, 29 Jan 2001 13:05:21 -0800

@@ -39,6 +39,7 @@ use vars qw(@EXPORT %dh);
 	    &autoscript &filearray &filedoublearray
 	    &getpackages &basename &dirname &xargs %dh
 	    &compat &addsubstvar &delsubstvar &excludefile &package_arch
+	    &package_is_arch_all &package_binary_arch &package_declared_arch
 	    &is_udeb &debhelper_script_subst &escape_shell
 	    &inhibit_log &load_log &write_log &commit_override_log
 	    &dpkg_architecture_value &sourcepackage &make_symlink
@@ -50,12 +51,15 @@ use vars qw(@EXPORT %dh);
 	    &generated_file &autotrigger &package_section
 	    &restore_file_on_clean &restore_all_files
 	    &open_gz &reset_perm_and_owner &deprecated_functionality
+	    &log_installed_files &buildarch &rename_path
 	    &get_buildprofile &get_buildprefix &package_eos_app_id
-	    &log_installed_files
+	    &on_pkgs_in_parallel &on_selected_pkgs_in_parallel
 );
 
 # The Makefile changes this if debhelper is installed in a PREFIX.
 my $prefix="/usr";
+
+my $MAX_PROCS = get_buildoption("parallel") || 1;
 
 sub init {
 	my %params=@_;
@@ -73,6 +77,13 @@ sub init {
 		} else {
 			push(@{$dh{DOPACKAGES}}, getpackages('arch'));
 			$dh{DOARCH} = 1;
+		}
+
+		if (! @{$dh{DOPACKAGES}}) {
+			if (! $dh{BLOCK_NOOP_WARNINGS}) {
+				warning("You asked that all arch in(dep) packages be built, but there are none of that type.");
+			}
+			exit(0);
 		}
 		# Clear @ARGV so we do not hit the expensive case below
 		@ARGV = ();
@@ -310,7 +321,7 @@ sub complex_doit {
 sub error_exitcode {
 	my $command=shift;
 	if ($? == -1) {
-		error("$command failed to to execute: $!");
+		error("$command failed to execute: $!");
 	}
 	elsif ($? & 127) {
 		error("$command died with signal ".($? & 127));
@@ -331,19 +342,82 @@ sub error_exitcode {
 # install_prog - installs an executable
 # install_lib  - installs a shared library (some systems may need x-bit, others don't)
 # install_dir  - installs a directory
-sub install_file {
-	doit('install', '-p', '-m0644', @_);
+{
+	my $_loaded = 0;
+	sub install_file {
+		unshift(@_, 0644);
+		goto \&_install_file_to_path;
+	}
+
+	sub install_prog {
+		unshift(@_, 0755);
+		goto \&_install_file_to_path;
+	}
+	sub install_lib {
+		unshift(@_, 0644);
+		goto \&_install_file_to_path;
+	}
+
+	sub _install_file_to_path {
+		my ($mode, $source, $dest) = @_;
+		if (not $_loaded) {
+			$_loaded++;
+			require File::Copy;
+		}
+		verbose_print(sprintf('install -p -m%04o %s', $mode, escape_shell($source, $dest)))
+			if $dh{VERBOSE};
+		return 1 if $dh{NO_ACT};
+		File::Copy::copy($source, $dest) or error("copy($source, $dest): $!");
+		chmod($mode, $dest) or error("chmod($mode, $dest): $!");
+		my (@stat) = stat($source);
+		error("stat($source): $!") if not @stat;
+		utime($stat[8], $stat[9], $dest)
+			or error(sprintf("utime(%d, %d, %s): $!", $stat[8] , $stat[9], $dest));
+		return 1;
+	}
 }
-sub install_prog {
-	doit('install', '-p', '-m0755', @_);
+
+{
+	my $_loaded = 0;
+	sub install_dir {
+		my @to_create = grep { not -d $_ } @_;
+		return if not @to_create;
+		if (not $_loaded) {
+			$_loaded++;
+			require File::Path;
+		}
+		verbose_print(sprintf('install -d %s', escape_shell(@to_create)))
+			if $dh{VERBOSE};
+		return 1 if $dh{NO_ACT};
+		eval {
+			File::Path::make_path(@to_create, {
+				# install -d uses 0755 (no umask), make_path uses 0777 (& umask) by default.
+				# Since we claim to run install -d, then ensure the mode is correct.
+				'chmod' => 0755,
+			});
+		};
+		if (my $err = "$@") {
+			$err =~ s/\s+at\s+\S+\s+line\s+\d+\.?\n//;
+			error($err);
+		}
+	}
 }
-sub install_lib {
-	doit('install', '-p', '-m0644', @_);
+
+sub rename_path {
+	my ($source, $dest) = @_;
+
+	if ($dh{VERBOSE}) {
+		my $files = escape_shell($source, $dest);
+		verbose_print("mv $files");
+	}
+	return 1 if $dh{NO_ACT};
+	if (not rename($source, $dest)) {
+		my $files = escape_shell($source, $dest);
+		error("mv $files: $!")
+	}
+	return 1;
 }
-sub install_dir {
-	my @to_create = grep { not -d $_ } @_;
-	doit('install', '-d', @to_create) if @to_create;
-}
+
 sub reset_perm_and_owner {
 	my ($mode, @paths) = @_;
 	doit('chmod', $mode, '--', @paths);
@@ -694,7 +768,7 @@ sub autoscript {
 		autoscript_sed($sed, $infile, "$outfile.new");
 		complex_doit("echo '# End automatically added section' >> $outfile.new");
 		complex_doit("cat $outfile >> $outfile.new");
-		complex_doit("mv $outfile.new $outfile");
+		rename_path("${outfile}.new", $outfile);
 	}
 	else {
 		complex_doit("echo \"# Automatically added by ".basename($0)."\">> $outfile");
@@ -756,7 +830,7 @@ sub autoscript_sed {
 		print {$ofd} "${trigger_type} ${trigger_target}\n";
 		close($ofd) or error("closing ${triggers_file}.new failed: $!");
 		close($ifd);
-		doit('mv', '-f', "${triggers_file}.new", $triggers_file);
+		rename_path("${triggers_file}.new", $triggers_file);
 	}
 }
 
@@ -780,7 +854,7 @@ sub delsubstvar {
 
 	if (-e $substvarfile) {
 		complex_doit("grep -a -s -v '^${substvar}=' $substvarfile > $substvarfile.new || true");
-		doit("mv", "$substvarfile.new","$substvarfile");
+		rename_path("${substvarfile}.new", $substvarfile);
 	}
 }
 				
@@ -826,8 +900,8 @@ sub addsubstvar {
 	}
 
 	if (length $line) {
-		 complex_doit("(grep -a -s -v ${substvar} $substvarfile; echo ".escape_shell("${substvar}=$line").") > $substvarfile.new");
-		 doit("mv", "$substvarfile.new", $substvarfile);
+		complex_doit("(grep -a -s -v ${substvar} $substvarfile; echo ".escape_shell("${substvar}=$line").") > $substvarfile.new");
+		rename_path("$substvarfile.new", $substvarfile);
 	}
 	else {
 		delsubstvar($package,$substvar);
@@ -910,9 +984,12 @@ sub excludefile {
 	sub dpkg_architecture_value {
 		my $var = shift;
 		if (exists($ENV{$var})) {
-			return $ENV{$var};
+			my $value = $ENV{$var};
+			return $value if $value ne q{};
+			warning("ENV[$var] is set to the empty string.  It has been ignored to avoid bugs like #862842");
+			delete($ENV{$var});
 		}
-		elsif (! exists($dpkg_arch_output{$var})) {
+		if (! exists($dpkg_arch_output{$var})) {
 			# Return here if we already consulted dpkg-architecture
 			# (saves a fork+exec on unknown variables)
 			return if %dpkg_arch_output;
@@ -1101,9 +1178,19 @@ sub getpackages {
 }
 
 # Returns the arch a package will build for.
+#
+# Deprecated: please switch to the more descriptive
+# package_binary_arch function instead.
 sub package_arch {
 	my $package=shift;
-	
+	return package_binary_arch($package);
+}
+
+# Returns the architecture going into the resulting .deb, i.e. the
+# host architecture or "all".
+sub package_binary_arch {
+	my $package=shift;
+
 	if (! exists $package_arches{$package}) {
 		warning "package $package is not in control info";
 		return buildarch();
@@ -1139,6 +1226,28 @@ sub package_eos_app_id {
 	}
 	verbose_print("Found app ID $package_eos_app_ids{$package}");
 	return $package_eos_app_ids{$package};
+}
+
+# Returns the Architecture: value which the package declared.
+sub package_declared_arch {
+	my $package=shift;
+
+	if (! exists $package_arches{$package}) {
+		warning "package $package is not in control info";
+		return buildarch();
+	}
+	return $package_arches{$package};
+}
+
+# Returns whether the package specified Architecture: all
+sub package_is_arch_all {
+	my $package=shift;
+
+	if (! exists $package_arches{$package}) {
+		warning "package $package is not in control info";
+		return buildarch();
+	}
+	return $package_arches{$package} eq 'all';
 }
 
 # Returns the multiarch value of a package.
@@ -1466,8 +1575,7 @@ sub install_dh_config_file {
 		# Set the mtime (and atime) to ensure reproducibility.
 		utime($sstat[9], $sstat[9], $target);
 	} else {
-		my $str_mode = sprintf('%#4o', $mode);
-		doit('install', '-p', "-m${str_mode}", $source, $target);
+		_install_file_to_path($mode, $source, $target);
 	}
 	return 1;
 }
@@ -1512,7 +1620,7 @@ sub restore_file_on_clean {
 			# Copy and then rename so we always have the full copy of
 			# the file in the correct place (if any at all).
 			doit('cp', '-an', '--reflink=auto', $file, "${bucket_dir}/${checksum}.tmp");
-			doit('mv', '-f', "${bucket_dir}/${checksum}.tmp", "${bucket_dir}/${checksum}");
+			rename_path("${bucket_dir}/${checksum}.tmp", "${bucket_dir}/${checksum}");
 			print {$fd} "${checksum} ${file}\n";
 		}
 		close($fd) or error("close($bucket_index) failed: $!");
@@ -1540,7 +1648,7 @@ sub restore_all_files {
 		#     that with scary warnings)
 		# 2) The file is always fully restored or in its "pre-restore" state.
 		doit('cp', '-an', '--reflink=auto', $bucket_file, "${bucket_file}.tmp");
-		doit('mv', '-Tf', "${bucket_file}.tmp", $stored_file);
+		rename_path("${bucket_file}.tmp", $stored_file);
 	}
 	close($fd);
 	return;
@@ -1556,8 +1664,11 @@ sub open_gz {
 		open($fd, '-|', 'gzip', '-dc', $file)
 		  or die("gzip -dc $file failed: $!");
 	} else {
-		open($fd, '<:gzip', $file)
-		  or die("open $file [<:gzip] failed: $!");
+		# Pass ":unix" as well due to https://rt.cpan.org/Public/Bug/Display.html?id=114557
+		# Alternatively, we could ensure we always use "POSIX::_exit".  Unfortunately,
+		# loading POSIX is insanely slow.
+		open($fd, '<:unix:gzip', $file)
+		  or die("open $file [<:unix:gzip] failed: $!");
 	}
 	return $fd;
 }
@@ -1589,6 +1700,66 @@ sub log_installed_files {
 	close($fh);
 
 	return 1;
+}
+
+
+sub on_pkgs_in_parallel(&) {
+	unshift(@_, $dh{DOPACKAGES});
+	goto \&on_selected_pkgs_in_parallel;
+}
+
+sub on_selected_pkgs_in_parallel {
+	my ($pkgs_ref, $code) = @_;
+	my @pkgs = @{$pkgs_ref};
+	my %pids;
+	my $parallel = $MAX_PROCS;
+	my $count_per_proc = int(scalar(@pkgs) / $parallel);
+	my $exit = 0;
+	if ($count_per_proc < 1) {
+		$count_per_proc = 1;
+		if (@pkgs > 3) {
+			# Forking has a considerable overhead, so bulk the number
+			# a bit.  We do not do this unconditionally, because we
+			# want parallel issues (if any) to appear already with 2
+			# packages and two procs (because people are lazy when
+			# testing).
+			#
+			# Same reason for also unconditionally forking with 1 pkg
+			# in 1 proc.
+			$count_per_proc = 2;
+		}
+	}
+	# Assertion, $count_per_proc * $parallel >= scalar(@pkgs)
+	while (@pkgs) {
+		my @batch = splice(@pkgs, 0, $count_per_proc);
+		my $pid = fork() // error("fork: $!");
+		if (not $pid) {
+			# Child processes should not write to the log file
+			inhibit_log();
+			eval {
+				$code->(@batch);
+			};
+			if (my $err = $@) {
+				$err =~ s/\n$//;
+				print STDERR "$err\n";
+				exit(2);
+			}
+			exit(0);
+		}
+		$pids{$pid} = 1;
+	}
+	while (%pids) {
+		my $pid = wait;
+		error("wait() failed: $!") if $pid == -1;
+		delete($pids{$pid});
+		if ($? != 0) {
+			$exit = 1;
+		}
+	}
+	if ($exit) {
+		error("Aborting due to earlier error");
+	}
+	return;
 }
 
 1

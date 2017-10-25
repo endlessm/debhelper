@@ -94,75 +94,77 @@ sub find_and_reset_perm {
 		"2>/dev/null | xargs -0r chmod ${mode}");
 }
 
-foreach my $package (@{$dh{DOPACKAGES}}) {
-	my @prefixes=("usr");
-	my $prefix=substr get_buildprefix(), 1;
-	push @prefixes, $prefix if $prefix ne "usr";
+on_pkgs_in_parallel {
+	foreach my $package (@_) {
+		my @prefixes=("usr");
+		my $prefix=substr get_buildprefix(), 1;
+		push @prefixes, $prefix if $prefix ne "usr";
 
-	foreach my $prefix (@prefixes) {
-	my $tmp=tmpdir($package);
+		foreach my $prefix (@prefixes) {
+		my $tmp=tmpdir($package);
 
-	# Adjust a few other non-/usr paths
-	my $etcdir="etc";
-	my $perlvendorlib=$vendorlib;
-	my $perlvendorarch=$vendorarch;
-	if ($prefix ne "usr") {
-		$etcdir="$prefix/etc";
-		$perlvendorlib=~s,^usr/,$prefix/,;
-		$perlvendorarch=~s,^usr/,$prefix/,;
-	}
-
-	my $find_options='';
-	if (defined($dh{EXCLUDE_FIND}) && $dh{EXCLUDE_FIND} ne '') {
-		$find_options="! \\( $dh{EXCLUDE_FIND} \\)";
-	}
-
-	# General permissions fixing.
-	complex_doit("find $tmp ${find_exclude_options} -print0",
-		"2>/dev/null | xargs -0r chown --no-dereference 0:0");
-	find_and_reset_perm($tmp, 'go=rX,u+rw,a-s', '! -type l');
-	
-	# Fix up permissions in usr/share/doc, setting everything to not
-	# executable by default, but leave examples directories alone.
-	find_and_reset_perm("${tmp}/${prefix}/share/doc", '0644', '-type f', "! -regex '$tmp/${prefix}/share/doc/[^/]*/examples/.*'");
-	find_and_reset_perm("${tmp}/${prefix}/share/doc", '0755', '-type d');
-
-	# Manpages, include file, desktop files, etc., shouldn't be executable
-	find_and_reset_perm([
-				"${tmp}/${prefix}/share/man",
-				"${tmp}/${prefix}/include",
-				"${tmp}/${prefix}/share/applications",
-				"${tmp}/${prefix}/share/lintian/overrides",
-			], '0644', '-type f');
-
-	# nor should perl modules.
-	find_and_reset_perm(["${tmp}/${perlvendorarch}", "${tmp}/${perlvendorlib}"],
-			'a-X', "-type f -perm -5 -name '*.pm'");
-
-	find_and_reset_perm($tmp, '0644', '-type f ' . patterns2find_expr(@mode_0644_patterns)) if @mode_0644_patterns;
-	find_and_reset_perm($tmp, '0755', '-type f ' . patterns2find_expr(@mode_0755_patterns)) if @mode_0755_patterns;
-	
-	# Programs in the bin and init.d dirs should be executable..
-	find_and_reset_perm([map { s,^usr/,${prefix}/,; "${tmp}/$_" } @executable_files_dirs], 'a+x', '-type f');
-	
-	# ADA ali files should be mode 444 to avoid recompilation
-	find_and_reset_perm("${tmp}/${prefix}/lib", 'uga-w', "-type f -name '*.ali'");
-
-	if ( -d "$tmp/$prefix/share/bug/$package") {
-		complex_doit("find $tmp/$prefix/share/bug/$package -type f",
-			"! -name 'script' ${find_exclude_options} -print0",
-			"2>/dev/null | xargs -0r chmod 644");
-		if ( -f "$tmp/$prefix/share/bug/$package/script" ) {
-			reset_perm_and_owner('0755', "$tmp/$prefix/share/bug/$package/script");
+		# Adjust a few other non-/usr paths
+		my $etcdir="etc";
+		my $perlvendorlib=$vendorlib;
+		my $perlvendorarch=$vendorarch;
+		if ($prefix ne "usr") {
+			$etcdir="$prefix/etc";
+			$perlvendorlib=~s,^usr/,$prefix/,;
+			$perlvendorarch=~s,^usr/,$prefix/,;
 		}
-	} elsif ( -f "$tmp/$prefix/share/bug/$package" ) {
-		reset_perm_and_owner('0755', "$tmp/$prefix/share/bug/$package");
-	}
 
-	# Files in $tmp/etc/sudoers.d/ must be mode 0440.
-	find_and_reset_perm("${tmp}/${etcdir}/sudoers.d", '0440', "-type f ! -perm 440");
+		my $find_options='';
+		if (defined($dh{EXCLUDE_FIND}) && $dh{EXCLUDE_FIND} ne '') {
+			$find_options="! \\( $dh{EXCLUDE_FIND} \\)";
+		}
+
+		# General permissions fixing.
+		complex_doit("find $tmp ${find_exclude_options} -print0",
+					 "2>/dev/null | xargs -0r chown --no-dereference 0:0");
+		find_and_reset_perm($tmp, 'go=rX,u+rw,a-s', '! -type l');
+	
+		# Fix up permissions in usr/share/doc, setting everything to not
+		# executable by default, but leave examples directories alone.
+		find_and_reset_perm("${tmp}/${prefix}/share/doc", '0644', '-type f', "! -regex '$tmp/${prefix}/share/doc/[^/]*/examples/.*'");
+		find_and_reset_perm("${tmp}/${prefix}/share/doc", '0755', '-type d');
+
+		# Manpages, include file, desktop files, etc., shouldn't be executable
+		find_and_reset_perm([
+					"${tmp}/${prefix}/share/man",
+					"${tmp}/${prefix}/include",
+					"${tmp}/${prefix}/share/applications",
+					"${tmp}/${prefix}/share/lintian/overrides",
+				], '0644', '-type f');
+
+		# nor should perl modules.
+		find_and_reset_perm(["${tmp}/${perlvendorarch}", "${tmp}/${perlvendorlib}"],
+							'a-X', "-type f -perm -5 -name '*.pm'");
+
+		find_and_reset_perm($tmp, '0644', '-type f ' . patterns2find_expr(@mode_0644_patterns)) if @mode_0644_patterns;
+		find_and_reset_perm($tmp, '0755', '-type f ' . patterns2find_expr(@mode_0755_patterns)) if @mode_0755_patterns;
+
+		# Programs in the bin and init.d dirs should be executable..
+		find_and_reset_perm([map { s,^usr/,${prefix}/,; "${tmp}/$_"} @executable_files_dirs], 'a+x', '-type f');
+	
+		# ADA ali files should be mode 444 to avoid recompilation
+		find_and_reset_perm("${tmp}/${prefix}/lib", 'uga-w', "-type f -name '*.ali'");
+
+		if ( -d "$tmp/$prefix/share/bug/$package") {
+			complex_doit("find $tmp/$prefix/share/bug/$package -type f",
+						 "! -name 'script' ${find_exclude_options} -print0",
+						 "2>/dev/null | xargs -0r chmod 644");
+			if ( -f "$tmp/$prefix/share/bug/$package/script" ) {
+				reset_perm_and_owner('0755', "$tmp/$prefix/share/bug/$package/script");
+			}
+		} elsif ( -f "$tmp/$prefix/share/bug/$package" ) {
+			reset_perm_and_owner('0755', "$tmp/$prefix/share/bug/$package");
+		}
+
+		# Files in $tmp/etc/sudoers.d/ must be mode 0440.
+		find_and_reset_perm("${tmp}/${etcdir}/sudoers.d", '0440', "-type f ! -perm 440");
 	}
-}
+	}
+};
 
 =head1 SEE ALSO
 

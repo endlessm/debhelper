@@ -650,13 +650,26 @@ which can also see the files installed by other helpers.
 
 =item -
 
-The B<--no-restart-on-upgrade> option in dh_installinit has been removed.
+The B<--no-restart-on-upgrade> option in B<dh_installinit> has been removed.
 Please use the new name B<--no-stop-on-upgrade>
 
 =item -
 
 The B<autoconf> buildsystem now passes B<--runstatedir=/run> to
 F<./configure>.
+
+=item -
+
+B<dh_installman> will now prefer detecting the language from the
+path name rather than the extension.
+
+=item -
+
+B<dh_auto_install> will now only create the destination
+directory it needs.  Previously, it would create the package build
+directory for all packages.  This will not affect packages that only
+build with debhelper commands, but it may expose bugs in commands not
+included in debhelper.
 
 =back
 
