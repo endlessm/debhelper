@@ -104,7 +104,7 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 	my $prefix=substr get_buildprefix($package), 1;
 	if ($prefix ne "usr" && -d "$tmp/usr") {
 		# Create the prefix if necessary
-		doit("install", "-d", "-o", 0, "-g", 0, "$tmp/$prefix");
+		install_dir("$tmp/$prefix");
 
 		# Move files from /usr to prefix and delete /usr
 		my $cmd="tar -C $tmp/usr -cf- . | tar -C $tmp/$prefix -xpf-";
