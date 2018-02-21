@@ -1,0 +1,3 @@
+We no longer manage debhelper in git, and will eventually delete this project.
+
+See https://obs-master.endlessm-sf.com/package/show?package=debhelper&project=eos%3Amaster%3Acore
